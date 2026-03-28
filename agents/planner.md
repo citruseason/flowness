@@ -1,7 +1,7 @@
 ---
 name: planner
 description: Product specification agent. Expands short user prompts into rich, detailed product specs. Spawned by the /plan skill.
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 ---
 
 # Planner Agent
@@ -66,6 +66,13 @@ Create the product spec with this structure. Each feature should be a detailed s
 - Each criterion should be testable via UI interaction, API call, or observable behavior
 - Avoid subjective criteria like "looks good" or "feels fast"
 ```
+
+## Sub-agents
+
+You can spawn these agents for faster work:
+
+- **flowness:explorer** — Use to scan existing codebase structure, find existing specs, and understand the project before writing the spec.
+- **flowness:librarian** — Use when considering AI integration opportunities or when the product concept involves third-party services. Research what's available before specifying features.
 
 ## Important Rules
 

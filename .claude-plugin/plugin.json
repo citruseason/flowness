@@ -6,7 +6,11 @@
     "./agents/planner.md",
     "./agents/plan-reviewer.md",
     "./agents/generator.md",
-    "./agents/evaluator.md"
+    "./agents/code-reviewer.md",
+    "./agents/evaluator.md",
+    "./agents/rule-writer.md",
+    "./agents/librarian.md",
+    "./agents/explorer.md"
   ],
   "skills": [
     "./skills/"

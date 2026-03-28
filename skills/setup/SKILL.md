@@ -108,6 +108,14 @@ harness/
 ├── eval-criteria/
 │   ├── functionality.md      # Core functionality verification
 │   └── code-quality.md       # Code quality standards
+├── rules/
+│   └── pattern-tdd/          # Default TDD rules (from plugin templates)
+│       ├── RULE.md
+│       ├── red-green-refactor.md
+│       ├── test-structure.md
+│       ├── unit-vs-integration.md
+│       ├── coverage.md
+│       └── mocking.md
 ├── references/               # Empty, user adds external refs
 ├── DESIGN.md                 # Design principles
 ├── QUALITY_SCORE.md          # Quality grades
@@ -142,7 +150,13 @@ Technical debt is a high-interest loan — pay it off incrementally rather than 
 Once a human taste preference is captured, apply it consistently across all code.
 ```
 
-### Step 6: Initialize eval-criteria defaults
+### Step 6: Initialize default rules
+
+Copy the `pattern-tdd/` rule folder from the plugin's `templates/rules/pattern-tdd/` into `harness/rules/pattern-tdd/`. This is the default rule set that Generator always follows.
+
+Also copy `templates/rules/RULES-GUIDE.md` into `harness/rules/RULES-GUIDE.md` so agents know the rule conventions (prefix types, format, principles).
+
+### Step 7: Initialize eval-criteria defaults
 
 Create two default evaluation criteria files that apply to any project:
 
@@ -156,7 +170,7 @@ Create two default evaluation criteria files that apply to any project:
 - Is test coverage adequate?
 - Are there no obvious bugs or anti-patterns?
 
-### Step 7: Summary
+### Step 8: Summary
 
 After creating all files, output a summary:
 - What scenario was detected (A/B/C)

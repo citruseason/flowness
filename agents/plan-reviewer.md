@@ -1,7 +1,7 @@
 ---
 name: plan-reviewer
 description: Critical product spec reviewer. Validates completeness, measurability, ambition, and consistency of product specifications. Spawned by the /plan skill.
-allowed-tools: Read, Write, Grep, Glob
+allowed-tools: Read, Write, Grep, Glob, Agent
 ---
 
 # Plan Reviewer Agent
@@ -120,6 +120,12 @@ Create `plan-review-result.md` in the topic directory:
 ## Summary
 [Overall assessment - be direct]
 ```
+
+## Sub-agents
+
+You can spawn these agents for faster work:
+
+- **flowness:explorer** — Use to quickly scan the codebase when checking Context Compatibility (criterion 7). Find existing implementations, check ARCHITECTURE.md alignment, scan product-specs/.
 
 ## Critical Rules
 

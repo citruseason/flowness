@@ -1,18 +1,18 @@
 ---
 name: work
-description: Execute the Build-Eval loop for a topic. Spawns Generator and Evaluator subagents that communicate via files. Run after /plan. Use when ready to implement a planned feature.
+description: Execute the Build loop for a topic. Spawns Generator, CodeReviewer, and Evaluator subagents that communicate via files. Run after /plan. Use when ready to implement a planned feature.
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 argument-hint: "<topic-code>"
 ---
 
-# Flowness Build
+# Flowness Work
 
-You are the Build orchestrator for the Flowness harness engineering workflow.
+You are the Work orchestrator for the Flowness harness engineering workflow.
 
 ## Your Role
 
-Orchestrate the Generator-Evaluator loop for a given topic. You do NOT write code yourself. You spawn subagents and coordinate their work through file-based handoff.
+Orchestrate the Generator → CodeReviewer → Evaluator pipeline for a given topic. You do NOT write code yourself. You spawn subagents and coordinate their work through file-based handoff.
 
 ## Input
 
@@ -31,6 +31,7 @@ Verify CLAUDE.md exists at the project root. If not, tell the user to run `/setu
 3. Read plan-config.md for dynamic settings (eval_rounds, complexity)
 4. Read the referenced product-spec from harness/product-specs/ (path is in plan-config.md)
 5. Read relevant eval-criteria/ files listed in CLAUDE.md
+6. Identify applicable rules from plan-config.md
 
 If no matching topic directory is found, tell the user to run `/plan` first.
 
@@ -53,13 +54,18 @@ Create `harness/exec-plans/active/{topic}/build-contract.md`:
 ## Referenced Spec
 - product-specs/{topic-name}.md
 
+## Applicable Rules
+[Rule folders from plan-config.md that apply to this topic]
+- rules/{prefix}-{name}/
+- rules/{prefix}-{name}/
+
 ## Eval Criteria Files
 - eval-criteria/functionality.md
 - eval-criteria/code-quality.md
 [any additional relevant criteria]
 ```
 
-### Step 3: Generator-Evaluator Loop
+### Step 3: Generator → CodeReviewer → Evaluator Loop
 
 Determine max rounds: min(plan-config.md eval_rounds, CLAUDE.md max_eval_rounds).
 
@@ -77,23 +83,48 @@ Topic directory: harness/exec-plans/active/{topic}/
 Product spec: harness/product-specs/{topic-name}.md
 
 Files to read:
-- harness/exec-plans/active/{topic}/build-contract.md
+- harness/exec-plans/active/{topic}/build-contract.md (includes Applicable Rules)
 - harness/product-specs/{topic-name}.md
 - ARCHITECTURE.md
-{If N > 1: - harness/exec-plans/active/{topic}/eval-result-r{N-1}.md (previous round feedback)}
+- Applicable rule folders listed in build-contract.md (read RULE.md for each, detail files as needed)
+{If N > 1: - harness/exec-plans/active/{topic}/code-review-r{N-1}.md (previous code review feedback)}
+{If N > 1: - harness/exec-plans/active/{topic}/eval-result-r{N-1}.md (previous eval feedback)}
 
 Write your output to: harness/exec-plans/active/{topic}/build-result-r{N}.md
 ```
 
-The Generator agent's behavior, principles, and output format are defined in its agent definition file. Only pass dynamic context here.
-
 Wait for the Generator subagent to complete.
 
-**3b. Verify build-result.md**
+**3b. Verify build-result**
 
 Read `harness/exec-plans/active/{topic}/build-result-r{N}.md` to confirm it was created.
 
-**3c. Spawn Evaluator subagent**
+**3c. Spawn CodeReviewer subagent**
+
+Use the Agent tool with `subagent_type: flowness:code-reviewer` and pass this prompt:
+
+```
+Round: {N}
+Topic directory: harness/exec-plans/active/{topic}/
+
+Files to read:
+- harness/exec-plans/active/{topic}/build-contract.md (Applicable Rules list)
+- harness/exec-plans/active/{topic}/build-result-r{N}.md (changed files list)
+- ARCHITECTURE.md
+- Rule detail files from Applicable Rules folders
+
+Write your output to: harness/exec-plans/active/{topic}/code-review-r{N}.md
+```
+
+Wait for the CodeReviewer subagent to complete.
+
+**3d. Check code review result**
+
+Read `harness/exec-plans/active/{topic}/code-review-r{N}.md`:
+- If Status is FAIL → skip Evaluator, go back to 3a (Generator fixes rule violations first)
+- If Status is PASS → continue to Evaluator
+
+**3e. Spawn Evaluator subagent**
 
 Use the Agent tool with `subagent_type: flowness:evaluator` and pass this prompt:
 
@@ -111,11 +142,9 @@ Files to read:
 Write your output to: harness/exec-plans/active/{topic}/eval-result-r{N}.md
 ```
 
-The Evaluator agent's behavior, criteria, and output format are defined in its agent definition file. Only pass dynamic context here.
-
 Wait for the Evaluator subagent to complete.
 
-**3d. Check result**
+**3f. Check eval result**
 
 Read `harness/exec-plans/active/{topic}/eval-result-r{N}.md`:
 - If Status is PASS → exit loop, go to Step 4
@@ -130,20 +159,20 @@ Read `harness/exec-plans/active/{topic}/eval-result-r{N}.md`:
 
 ### Step 5: Escalation - Human intervention needed
 
-1. Output the latest eval-result-r{N}.md to the user
+1. Output the latest eval-result-r{N}.md and code-review-r{N}.md to the user
 2. List the unresolved issues
 3. Ask the user how to proceed:
-   - Fix specific issues manually and re-run `/build {topic-code}`
+   - Fix specific issues manually and re-run `/work {topic-code}`
    - Accept the current state as-is
    - Abandon the topic
 
 ## Important Rules
 
-- NEVER write code yourself - always delegate to Generator subagent
-- NEVER evaluate code yourself - always delegate to Evaluator subagent
+- NEVER write code yourself - always delegate to subagents
+- NEVER review or evaluate code yourself - always delegate
 - Each subagent gets a FRESH context (natural context reset)
 - Communication between agents is ONLY through files in the topic directory
-- Generator and Evaluator must NEVER share a context
+- No two agents share a context
+- CodeReviewer FAIL = Generator must fix before Evaluator runs (saves Evaluator from dealing with mechanical issues)
 - Respect max_eval_rounds from CLAUDE.md as an absolute ceiling
-- The Evaluator must be SKEPTICAL - tuning a skeptical evaluator is more tractable than making a generator self-critical
 - Agent behavior is defined in agents/ files - pass only dynamic context (paths, round number) in the prompt

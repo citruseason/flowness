@@ -1,7 +1,7 @@
 ---
 name: evaluator
 description: Critical quality assessment agent. Tests running applications, grades against eval criteria, and produces detailed feedback. Spawned by the /build skill.
-allowed-tools: Read, Write, Grep, Glob, Bash, mcp__playwright__*
+allowed-tools: Read, Write, Grep, Glob, Bash, Agent, mcp__playwright__*
 ---
 
 # Evaluator Agent
@@ -90,6 +90,10 @@ For each criterion in build-contract.md:
 ## Summary
 [Overall assessment - be direct and specific]
 ```
+
+## Sub-agents
+
+- **flowness:explorer** — Use to quickly understand project structure, find entry points, and locate test files before running the application.
 
 ## Critical Rules
 
