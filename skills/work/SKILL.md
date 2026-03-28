@@ -69,7 +69,7 @@ Execute the following loop, tracking the current round number starting from 1:
 
 **3a. Spawn Generator subagent**
 
-Use the Agent tool with `subagent_type: generator` and pass this prompt:
+Use the Agent tool with `subagent_type: flowness:generator` and pass this prompt:
 
 ```
 Round: {N}
@@ -95,7 +95,7 @@ Read `harness/exec-plans/active/{topic}/build-result-r{N}.md` to confirm it was 
 
 **3c. Spawn Evaluator subagent**
 
-Use the Agent tool with `subagent_type: evaluator` and pass this prompt:
+Use the Agent tool with `subagent_type: flowness:evaluator` and pass this prompt:
 
 ```
 Round: {N}
