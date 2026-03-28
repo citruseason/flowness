@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "description": "Harness engineering workflow plugin for Claude Code. Structured development with Setup, Plan, Work (Build-Eval), and Maintain phases.",
   "agents": [
+    "./agents/planner.md",
+    "./agents/plan-reviewer.md",
     "./agents/generator.md",
     "./agents/evaluator.md"
   ],

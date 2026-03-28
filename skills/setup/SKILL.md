@@ -48,6 +48,7 @@ Use the template structure:
 
 ## Harness Config
 ```yaml
+max_plan_rounds: 5
 max_eval_rounds: 3
 eval_tool: playwright    # playwright | chrome-devtools
 ```

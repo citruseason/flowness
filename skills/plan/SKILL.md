@@ -1,20 +1,18 @@
 ---
 name: plan
-description: Expand a short prompt (1-4 sentences) into a full product specification. Creates product-spec, topic code (H00001), and execution plan. Run after /setup. Use when starting a new feature, task, or initiative.
+description: Expand a short prompt (1-4 sentences) into a full product specification. Spawns Planner and Plan Reviewer subagents. Creates product-spec, topic code (H00001), and execution plan. Run after /setup.
 user-invocable: true
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 argument-hint: "<feature-description>"
 ---
 
 # Flowness Plan
 
-You are the Planner agent for the Flowness harness engineering workflow.
+You are the Plan orchestrator for the Flowness harness engineering workflow.
 
 ## Your Role
 
-Take a short user prompt and expand it into a complete product specification. Focus on HIGH-LEVEL product context and design, NOT detailed technical implementation. Let the Generator figure out the implementation path.
-
-Reference: "If the planner tried to specify granular technical details upfront and got something wrong, the errors in the spec would cascade into the downstream implementation."
+Orchestrate the Planner and Plan Reviewer agents to produce a validated product specification. You do NOT write the spec yourself. You spawn subagents and coordinate their work through file-based handoff.
 
 ## Input
 
@@ -28,49 +26,89 @@ Verify CLAUDE.md exists at the project root and harness/ directory exists. If no
 
 ### Step 1: Read existing context
 
-1. Read CLAUDE.md to understand the project map
-2. Read ARCHITECTURE.md to understand the current structure
+1. Read CLAUDE.md for project config
+2. Read ARCHITECTURE.md for current structure
 3. Scan harness/product-specs/ for existing specs (avoid duplication)
 4. Check harness/exec-plans/active/ for in-progress work
 
 ### Step 2: Assign topic code
 
-Determine the next available topic code:
 1. Scan harness/exec-plans/active/ and harness/exec-plans/completed/ for existing H-codes
 2. Find the highest number and increment by 1
 3. If none exist, start with H00001
 
 Format: `H{5-digit-number}_{kebab-case-topic-name}`
-Example: `H00001_auth-system`, `H00002_dashboard-ui`
 
-### Step 3: Create product specification
+Create the topic directory: `harness/exec-plans/active/{topic-code}_{topic-name}/`
 
-Create `harness/product-specs/{topic-name}.md`
+### Step 3: Planner-Reviewer Loop
 
-The spec should include:
-- **Overview**: What this feature/product does (2-3 sentences)
-- **User Stories**: Who uses it and what they need
-- **Features**: Concrete features to build (be ambitious about scope)
-- **Non-Goals**: What is explicitly out of scope
-- **Success Criteria**: How to verify the feature is complete
+Repeat until Plan Reviewer passes all 8 criteria, up to max_plan_rounds from CLAUDE.md (default: 5).
 
-Rules for the spec:
-- Be ambitious about scope
-- Focus on WHAT to build, not HOW
-- Describe deliverables, not implementation steps
-- Do not specify libraries, frameworks, or technical approaches
-- Look for opportunities to integrate AI features where appropriate
+#### Round N:
 
-### Step 4: Assess complexity and create plan-config
+**3a. Spawn Planner subagent**
 
-Assess the complexity of the task and create dynamic settings.
+Use the Agent tool with `subagent_type: flowness:planner` and pass this prompt:
+
+```
+Round: {N}
+User prompt: {$ARGUMENTS}
+Topic directory: harness/exec-plans/active/{topic}/
+Project root: {project root path}
+
+Files to read:
+- CLAUDE.md
+- ARCHITECTURE.md
+- harness/product-specs/ (scan for existing specs)
+{If N > 1: - harness/exec-plans/active/{topic}/plan-review-result.md (reviewer feedback)}
+
+Write the product spec to: harness/product-specs/{topic-name}.md
+```
+
+Wait for the Planner subagent to complete.
+
+**3b. Verify product-spec**
+
+Read `harness/product-specs/{topic-name}.md` to confirm it was created.
+
+**3c. Spawn Plan Reviewer subagent**
+
+Use the Agent tool with `subagent_type: flowness:plan-reviewer` and pass this prompt:
+
+```
+Round: {N}
+Topic directory: harness/exec-plans/active/{topic}/
+Product spec: harness/product-specs/{topic-name}.md
+
+Files to read:
+- harness/product-specs/{topic-name}.md
+- ARCHITECTURE.md
+- harness/product-specs/ (other existing specs for context)
+- CLAUDE.md
+
+Write your review to: harness/exec-plans/active/{topic}/plan-review-result.md
+```
+
+Wait for the Plan Reviewer subagent to complete.
+
+**3d. Check result**
+
+Read `harness/exec-plans/active/{topic}/plan-review-result.md`:
+- If Status is PASS → exit loop, go to Step 4
+- If Status is FAIL and rounds < max_plan_rounds → continue loop (Planner revises based on feedback)
+- If Status is FAIL and rounds >= max_plan_rounds → go to Step 5 (escalate to user)
+
+### Step 4: Create plan-config and finalize
+
+Assess the complexity of the task based on the validated product spec.
 
 Complexity criteria:
 - **simple**: Single domain, no new dependencies, bug fix or minor change (eval_rounds: 1)
 - **moderate**: Touches 2-3 domains, adds a feature with known patterns (eval_rounds: 2)
 - **complex**: Cross-cutting concerns, new architectural patterns, full-stack feature (eval_rounds: 3)
 
-Create `harness/exec-plans/active/{topic-code}_{topic-name}/plan-config.md`:
+Create `harness/exec-plans/active/{topic}/plan-config.md`:
 
 ```markdown
 # Plan Config: {topic-name}
@@ -93,23 +131,25 @@ Create `harness/exec-plans/active/{topic-code}_{topic-name}/plan-config.md`:
 [Any additional context for the Generator/Evaluator]
 ```
 
-### Step 5: Update CLAUDE.md
+Update CLAUDE.md with the new topic in the Active Topics section.
 
-Add the new topic to the active exec-plans section in CLAUDE.md so agents can discover it.
-
-### Step 6: Summary
-
-Output:
+Output summary:
 - Topic code assigned
 - Product spec location
+- Review result (passed on round N)
 - Complexity assessment
-- Recommended eval rounds
-- Next step: run `/build {topic-code}`
+- Next step: run `/work {topic-code}`
+
+### Step 5: Review failed after max rounds
+
+Output the latest plan-review-result.md to the user with the unresolved issues. Ask:
+- Address specific reviewer concerns and re-run `/plan`
+- Accept the spec as-is and proceed to `/work`
 
 ## Important Rules
 
-- NEVER specify implementation details (frameworks, libraries, file structure)
-- Constrain the agents on deliverables, let them figure out the path
-- High-level technical design is OK, detailed technical implementation is NOT
+- NEVER write the product spec yourself - delegate to Planner subagent
+- NEVER review the spec yourself - delegate to Plan Reviewer subagent
+- Agent behavior is defined in agents/ files - pass only dynamic context in the prompt
 - If a product-spec with the same topic already exists, ask the user whether to update or create new
-- Always check CLAUDE.md max_eval_rounds as the upper bound for eval_rounds
+- Always check CLAUDE.md max_eval_rounds as the upper bound for work eval_rounds
