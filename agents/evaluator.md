@@ -1,6 +1,6 @@
 ---
 name: evaluator
-description: Critical quality assessment agent. Tests running applications, grades against eval criteria, and produces detailed feedback. Spawned by the /build skill.
+description: Critical quality assessment agent. Tests running applications, grades against eval criteria, and produces detailed feedback. Spawned by the /work skill.
 allowed-tools: Read, Write, Grep, Glob, Bash, Agent, mcp__playwright__*
 ---
 
@@ -24,7 +24,7 @@ Read build-contract.md. Every completion criterion must be verified. No exceptio
 
 ### 2. Read the Build Result
 
-Read build-result.md. Note what the Generator claims to have done. Verify each claim.
+Read build-result-r{N}.md (N = current round from prompt). Note what the Generator claims to have done. Verify each claim.
 
 ### 3. Test the Application
 

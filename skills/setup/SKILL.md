@@ -102,20 +102,13 @@ harness/
 │   └── core-beliefs.md       # Core engineering beliefs
 ├── product-specs/            # Empty, populated by /plan
 ├── exec-plans/
-│   ├── active/               # Empty, populated by /plan and /build
+│   ├── active/               # Empty, populated by /plan and /work
 │   ├── completed/            # Empty, moved here after completion
 │   └── tech-debt-tracker.md  # Technical debt tracking
 ├── eval-criteria/
 │   ├── functionality.md      # Core functionality verification
 │   └── code-quality.md       # Code quality standards
-├── rules/
-│   └── pattern-tdd/          # Default TDD rules (from plugin templates)
-│       ├── RULE.md
-│       ├── red-green-refactor.md
-│       ├── test-structure.md
-│       ├── unit-vs-integration.md
-│       ├── coverage.md
-│       └── mocking.md
+├── rules/                    # Empty, populated by /rule
 ├── references/               # Empty, user adds external refs
 ├── DESIGN.md                 # Design principles
 ├── QUALITY_SCORE.md          # Quality grades
@@ -150,11 +143,11 @@ Technical debt is a high-interest loan — pay it off incrementally rather than 
 Once a human taste preference is captured, apply it consistently across all code.
 ```
 
-### Step 6: Initialize default rules
+### Step 6: Initialize rules directory
 
-Copy the `pattern-tdd/` rule folder from the plugin's `templates/rules/pattern-tdd/` into `harness/rules/pattern-tdd/`. This is the default rule set that Generator always follows.
+Copy `templates/rules/RULES-GUIDE.md` into `harness/rules/RULES-GUIDE.md` so agents know the rule conventions (prefix types, format, principles).
 
-Also copy `templates/rules/RULES-GUIDE.md` into `harness/rules/RULES-GUIDE.md` so agents know the rule conventions (prefix types, format, principles).
+The rules/ directory starts empty. Use `/rule` to add project-specific rules (conv-, pattern-, lib-). TDD is handled by the internal `flowness:tdd` skill, not as a rule.
 
 ### Step 7: Initialize eval-criteria defaults
 

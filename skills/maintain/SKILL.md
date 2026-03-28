@@ -1,6 +1,6 @@
 ---
 name: maintain
-description: Run linters, doc-gardening, and garbage collection on the harness and codebase. Enforces architecture, updates quality scores, and maintains document freshness. Use after /build or periodically.
+description: Run linters, doc-gardening, and garbage collection on the harness and codebase. Enforces architecture, updates quality scores, and maintains document freshness. Use after /work or periodically.
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 argument-hint: "[lint | doc-garden | gc | all]"

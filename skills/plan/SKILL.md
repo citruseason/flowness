@@ -108,6 +108,11 @@ Complexity criteria:
 - **moderate**: Touches 2-3 domains, adds a feature with known patterns (eval_rounds: 2)
 - **complex**: Cross-cutting concerns, new architectural patterns, full-stack feature (eval_rounds: 3)
 
+Scan `harness/rules/` for existing rule folders and determine which ones apply to this topic based on:
+- The product spec's tech stack and domain
+- ARCHITECTURE.md's structure
+- Note: TDD is handled by the `flowness:tdd` skill, not as a rule in harness/rules/
+
 Create `harness/exec-plans/active/{topic}/plan-config.md`:
 
 ```markdown
@@ -126,6 +131,9 @@ Create `harness/exec-plans/active/{topic}/plan-config.md`:
 - planner: completed
 - eval_rounds: [1 for simple, 2 for moderate, 3 for complex]
 - eval_tool: [from CLAUDE.md config or default: playwright]
+
+## Applicable Rules
+[List matching conv-/pattern-/lib- rules found in harness/rules/]
 
 ## Notes
 [Any additional context for the Generator/Evaluator]

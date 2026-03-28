@@ -153,9 +153,11 @@ Read `harness/exec-plans/active/{topic}/eval-result-r{N}.md`:
 
 ### Step 4: Success
 
-1. Output the latest eval-result-r{N}.md summary to the user
-2. Inform the user the build is complete
-3. Suggest running `/maintain` to update quality scores and docs
+1. Move the topic directory from `harness/exec-plans/active/{topic}/` to `harness/exec-plans/completed/{topic}/`
+2. Update CLAUDE.md: move the topic from Active Topics to a Completed Topics section (or remove it)
+3. Output the latest eval-result-r{N}.md summary to the user
+4. Inform the user the build is complete
+5. Suggest running `/maintain` to update quality scores and docs
 
 ### Step 5: Escalation - Human intervention needed
 
