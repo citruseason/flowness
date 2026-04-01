@@ -16,6 +16,16 @@ claude plugins install flowness
 
 To verify, run `/setup` inside a Claude Code session — it should be recognized as a skill.
 
+## Updating
+
+```bash
+# 1. Refresh marketplace metadata
+claude plugins marketplace update flowness
+
+# 2. Update the installed plugin
+claude plugins update flowness@flowness
+```
+
 ## Skills (Slash Commands)
 
 | Command | Description |
