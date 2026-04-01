@@ -1,6 +1,6 @@
 ---
 name: work
-description: Execute the Build loop for a topic. Spawns Generator, CodeReviewer, and Evaluator subagents that communicate via files. Run after /plan. Use when ready to implement a planned feature.
+description: Execute the Build loop for a topic. Spawns Generator, multi-perspective Reviewers, and Evaluator subagents that communicate via files. Run after /plan. Use when ready to implement a planned feature.
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 argument-hint: "<topic-code>"
@@ -12,7 +12,7 @@ You are the Work orchestrator for the Flowness harness engineering workflow.
 
 ## Your Role
 
-Orchestrate the Generator → CodeReviewer → Evaluator pipeline for a given topic. You do NOT write code yourself. You spawn subagents and coordinate their work through file-based handoff.
+Orchestrate the Generator → Multi-Reviewer → Evaluator pipeline for a given topic. You do NOT write code yourself. You spawn subagents and coordinate their work through file-based handoff.
 
 ## Input
 
@@ -65,7 +65,7 @@ Create `harness/exec-plans/active/{topic}/build-contract.md`:
 [any additional relevant criteria]
 ```
 
-### Step 3: Generator → CodeReviewer → Evaluator Loop
+### Step 3: Generator → Multi-Reviewer → Evaluator Loop
 
 Determine max rounds: min(plan-config.md eval_rounds, CLAUDE.md max_eval_rounds).
 
@@ -99,9 +99,13 @@ Wait for the Generator subagent to complete.
 
 Read `harness/exec-plans/active/{topic}/build-result-r{N}.md` to confirm it was created.
 
-**3c. Spawn CodeReviewer subagent**
+**3c. Spawn 5 Reviewer subagents in parallel**
 
-Use the Agent tool with `subagent_type: flowness:code-reviewer` and pass this prompt:
+Spawn ALL 5 reviewers simultaneously using multiple Agent tool calls in a single message. Each reviewer focuses on a different perspective.
+
+**Reviewer 1: RuleReviewer**
+
+Use the Agent tool with `subagent_type: flowness:rule-reviewer` and pass this prompt:
 
 ```
 Round: {N}
@@ -110,21 +114,115 @@ Topic directory: harness/exec-plans/active/{topic}/
 Files to read:
 - harness/exec-plans/active/{topic}/build-contract.md (Applicable Rules list)
 - harness/exec-plans/active/{topic}/build-result-r{N}.md (changed files list)
-- ARCHITECTURE.md
 - Rule detail files from Applicable Rules folders
 
-Write your output to: harness/exec-plans/active/{topic}/code-review-r{N}.md
+Return your findings as structured text. Do NOT create a file.
 ```
 
-Wait for the CodeReviewer subagent to complete.
+**Reviewer 2: QualityReviewer**
 
-**3d. Check code review result**
+Use the Agent tool with `subagent_type: flowness:quality-reviewer` and pass this prompt:
+
+```
+Round: {N}
+Topic directory: harness/exec-plans/active/{topic}/
+
+Files to read:
+- harness/exec-plans/active/{topic}/build-result-r{N}.md (changed files list)
+- ARCHITECTURE.md
+
+Return your findings as structured text. Do NOT create a file.
+```
+
+**Reviewer 3: SecurityReviewer**
+
+Use the Agent tool with `subagent_type: flowness:security-reviewer` and pass this prompt:
+
+```
+Round: {N}
+Topic directory: harness/exec-plans/active/{topic}/
+
+Files to read:
+- harness/exec-plans/active/{topic}/build-result-r{N}.md (changed files list)
+- ARCHITECTURE.md
+
+Return your findings as structured text. Do NOT create a file.
+```
+
+**Reviewer 4: PerformanceReviewer**
+
+Use the Agent tool with `subagent_type: flowness:performance-reviewer` and pass this prompt:
+
+```
+Round: {N}
+Topic directory: harness/exec-plans/active/{topic}/
+
+Files to read:
+- harness/exec-plans/active/{topic}/build-result-r{N}.md (changed files list)
+- ARCHITECTURE.md
+
+Return your findings as structured text. Do NOT create a file.
+```
+
+**Reviewer 5: ArchitectureReviewer**
+
+Use the Agent tool with `subagent_type: flowness:architecture-reviewer` and pass this prompt:
+
+```
+Round: {N}
+Topic directory: harness/exec-plans/active/{topic}/
+
+Files to read:
+- harness/exec-plans/active/{topic}/build-result-r{N}.md (changed files list)
+- harness/exec-plans/active/{topic}/build-contract.md
+- ARCHITECTURE.md
+
+Return your findings as structured text. Do NOT create a file.
+```
+
+Wait for ALL 5 reviewer subagents to complete.
+
+**3d. Aggregate review results**
+
+Collect the outputs from all 5 reviewers and create `harness/exec-plans/active/{topic}/code-review-r{N}.md`:
+
+```markdown
+# Code Review
+
+## Round: {N}
+## Status: PASS | FAIL
+
+## Rule Violations
+{RuleReviewer output — or "No violations found."}
+
+## Quality Issues
+{QualityReviewer output — or "No issues found."}
+
+## Security Issues
+{SecurityReviewer output — or "No issues found."}
+
+## Performance Issues
+{PerformanceReviewer output — or "No issues found."}
+
+## Architecture Issues
+{ArchitectureReviewer output — or "No issues found."}
+
+## Summary
+- Total: {n} issues ({critical}C / {major}M / {minor}m)
+- Blocking: {list of critical + major issues}
+```
+
+Determine the overall Status:
+- Any **critical** or **major** issue from ANY reviewer → **FAIL**
+- Only **minor** issues (or no issues) → **PASS**
+
+**3e. Check code review result**
 
 Read `harness/exec-plans/active/{topic}/code-review-r{N}.md`:
-- If Status is FAIL → skip Evaluator, go back to 3a (Generator fixes rule violations first)
+- If Status is FAIL → skip Evaluator, go back to 3a (Generator fixes all reviewer findings first)
 - If Status is PASS → continue to Evaluator
 
-**3e. Spawn Evaluator subagent**
+**3f. Spawn Evaluator subagent**
 
 Use the Agent tool with `subagent_type: flowness:evaluator` and pass this prompt:
 
@@ -144,7 +242,7 @@ Write your output to: harness/exec-plans/active/{topic}/eval-result-r{N}.md
 
 Wait for the Evaluator subagent to complete.
 
-**3f. Check eval result**
+**3g. Check eval result**
 
 Read `harness/exec-plans/active/{topic}/eval-result-r{N}.md`:
 - If Status is PASS → exit loop, go to Step 4
@@ -175,6 +273,8 @@ Read `harness/exec-plans/active/{topic}/eval-result-r{N}.md`:
 - Each subagent gets a FRESH context (natural context reset)
 - Communication between agents is ONLY through files in the topic directory
 - No two agents share a context
-- CodeReviewer FAIL = Generator must fix before Evaluator runs (saves Evaluator from dealing with mechanical issues)
+- Spawn ALL 5 reviewers in PARALLEL (single message, multiple Agent tool calls) — do NOT spawn them sequentially
+- Reviewers return results as text — YOU aggregate them into code-review-r{N}.md
+- Any reviewer finding a critical or major issue = FAIL → Generator must fix before Evaluator runs
 - Respect max_eval_rounds from CLAUDE.md as an absolute ceiling
 - Agent behavior is defined in agents/ files - pass only dynamic context (paths, round number) in the prompt
