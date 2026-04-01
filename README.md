@@ -4,29 +4,17 @@ Structured engineering workflow plugin for Claude Code. Guides development throu
 
 ## Installation
 
-### Prerequisites
-
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI installed and authenticated
-
-### Install the plugin
+**Prerequisite:** [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI installed and authenticated.
 
 ```bash
-claude plugin add /path/to/flowness
+# 1. Add this repo as a marketplace
+claude plugins marketplace add citruseason/flowness
+
+# 2. Install the plugin
+claude plugins install flowness
 ```
 
-Or, install directly from GitHub:
-
-```bash
-claude plugin add https://github.com/citruseason/flowness
-```
-
-### Verify installation
-
-```bash
-claude /setup --help
-```
-
-If the `/setup` skill is recognized, the plugin is active.
+To verify, run `/setup` inside a Claude Code session — it should be recognized as a skill.
 
 ## Skills (Slash Commands)
 
