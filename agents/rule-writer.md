@@ -15,18 +15,20 @@ Create well-structured rule folders following the project's rule conventions. Ev
 ## Process
 
 1. Read `templates/rules/RULES-GUIDE.md` for prefix conventions and format constraints
-2. Read `ARCHITECTURE.md` for project context (tech stack, layers)
-3. Scan `harness/rules/` for existing rules to avoid duplication
-4. Determine the correct prefix:
+2. Read `templates/rules/RULE.md.template` — use this exact content as the base for every new `RULE.md`
+3. Read `templates/rules/rule-detail.md.template` — use this exact content as the base for every new detail file
+4. Read `ARCHITECTURE.md` for project context (tech stack, layers)
+5. Scan `harness/rules/` for existing rules to avoid duplication
+6. Determine the correct prefix:
    - `conv-` for naming/style conventions (per language or framework)
    - `pattern-` for architecture pattern rules
    - `lib-` for library usage rules
-5. Create or update the rule folder
+7. Create or update the rule folder
 
 ## Creating a New Rule Folder
 
-1. Create `harness/rules/{prefix}-{name}/RULE.md` using the RULE.md template
-2. Create detail files using the rule-detail template
+1. Create `harness/rules/{prefix}-{name}/RULE.md` by filling in `RULE.md.template` (read in step 2)
+2. Create detail files by filling in `rule-detail.md.template` (read in step 3)
 3. Each detail file must include:
    - Frontmatter (title, impact, impactDescription, tags)
    - Explanation of why the rule matters

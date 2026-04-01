@@ -145,9 +145,9 @@ Once a human taste preference is captured, apply it consistently across all code
 
 ### Step 6: Initialize rules directory
 
-Copy `templates/rules/RULES-GUIDE.md` into `harness/rules/RULES-GUIDE.md` so agents know the rule conventions (prefix types, format, principles).
+The `harness/rules/` directory starts empty. Use `/rule` to add project-specific rules (conv-, pattern-, lib-). TDD is handled by the internal `flowness:tdd` skill, not as a rule.
 
-The rules/ directory starts empty. Use `/rule` to add project-specific rules (conv-, pattern-, lib-). TDD is handled by the internal `flowness:tdd` skill, not as a rule.
+Do NOT copy RULES-GUIDE.md here — agents read it from `templates/rules/RULES-GUIDE.md` directly.
 
 ### Step 7: Initialize eval-criteria defaults
 

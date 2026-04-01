@@ -51,13 +51,11 @@ Project root: {project root path}
 
 Files to read:
 - templates/rules/RULES-GUIDE.md
+- templates/rules/RULE.md.template (READ this file — use as base for new RULE.md)
+- templates/rules/rule-detail.md.template (READ this file — use as base for each detail file)
 - ARCHITECTURE.md
 - harness/rules/ (scan existing)
 {If add-detail: - harness/rules/{existing-folder}/RULE.md}
-
-Templates to use:
-- templates/rules/RULE.md.template (for new folder)
-- templates/rules/rule-detail.md.template (for detail files)
 ```
 
 Wait for the Rule Writer to complete.
