@@ -1,0 +1,17 @@
+{
+  "name": "flowness",
+  "metadata": {
+    "description": "Harness engineering workflow plugin for Claude Code. Structured development with Setup, Plan, Work (Build-Eval), and Maintain phases."
+  },
+  "owner": {
+    "name": "citruseason"
+  },
+  "plugins": [
+    {
+      "name": "flowness",
+      "description": "Structured development workflow with Setup, Plan, Work (Build-Eval), and Maintain phases.",
+      "source": "./",
+      "category": "development"
+    }
+  ]
+}
