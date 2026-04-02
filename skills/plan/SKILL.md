@@ -24,6 +24,14 @@ The user describes what they want to build: $ARGUMENTS
 
 Verify CLAUDE.md exists at the project root and harness/ directory exists. If not, tell the user to run `/setup` first.
 
+Check Codex availability:
+
+```bash
+node "$(find ~/.claude/plugins -name 'codex-companion.mjs' 2>/dev/null | head -1)" setup --json 2>/dev/null
+```
+
+If the result contains `"ready": true`, set `CODEX_AVAILABLE=true`. Otherwise `CODEX_AVAILABLE=false`. If the script is not found, `CODEX_AVAILABLE=false`.
+
 ### Step 1: Brainstorming
 
 Before spawning any subagent, collaboratively clarify the user's intent.
@@ -132,7 +140,11 @@ Wait for the Planner subagent to complete.
 
 Read `harness/product-specs/{topic-name}.md` to confirm it was created.
 
-**4c. Spawn Plan Reviewer subagent**
+**4c. Spawn reviewers in parallel**
+
+Spawn both reviewers simultaneously in a single message.
+
+**Reviewer 1: Plan Reviewer**
 
 Use the Agent tool with `subagent_type: flowness:plan-reviewer` and pass this prompt:
 
@@ -150,13 +162,52 @@ Files to read:
 Write your review to: harness/exec-plans/active/{topic}/plan-review-result.md
 ```
 
-Wait for the Plan Reviewer subagent to complete.
+**Reviewer 2: Codex Technical Reviewer** _(only if CODEX_AVAILABLE=true)_
 
-**4d. Check result**
+Use the Agent tool with `subagent_type: codex:codex-rescue` and pass this prompt:
 
-Read `harness/exec-plans/active/{topic}/plan-review-result.md`:
+```
+Review the product specification at harness/product-specs/{topic-name}.md for technical feasibility. This is a read-only review — do not modify any files.
+
+Focus on:
+1. Technical feasibility — can this be built with the tech stack described in ARCHITECTURE.md?
+2. Implementation clarity — is there enough detail for a developer to implement without guessing?
+3. Hidden complexity — dependencies, edge cases, or integrations the spec underestimates?
+4. Architectural alignment — does the spec respect the layer boundaries in ARCHITECTURE.md?
+
+Return a structured response with:
+- Status: PASS or FAIL
+- Issues: list of blocking concerns (FAIL) or minor notes (PASS)
+```
+
+Wait for ALL spawned reviewers to complete.
+
+**4d. Aggregate and check results**
+
+Read `harness/exec-plans/active/{topic}/plan-review-result.md` (Plan Reviewer output).
+If `CODEX_AVAILABLE=true`, also interpret the Codex reviewer's returned text for Status and Issues.
+
+Combine into a final `plan-review-result.md`:
+
+```markdown
+# Plan Review Result
+
+## Round: {N}
+## Status: PASS | FAIL
+
+## Plan Reviewer
+{plan-reviewer output}
+
+## Codex Technical Review
+{codex output — or "Not available" if CODEX_AVAILABLE=false}
+
+## Combined verdict
+- PASS only if BOTH reviewers return PASS
+- FAIL if either reviewer returns FAIL (list all blocking issues)
+```
+
 - If Status is PASS → exit loop, go to Step 5
-- If Status is FAIL and rounds < max_plan_rounds → continue loop (Planner revises based on feedback)
+- If Status is FAIL and rounds < max_plan_rounds → continue loop (Planner revises based on combined feedback)
 - If Status is FAIL and rounds >= max_plan_rounds → go to Step 6 (escalate to user)
 
 ### Step 5: Create plan-config and finalize
@@ -221,3 +272,5 @@ Output the latest plan-review-result.md to the user with the unresolved issues. 
 - Agent behavior is defined in agents/ files - pass only dynamic context in the prompt
 - If a product-spec with the same topic already exists, ask the user whether to update or create new
 - Always check CLAUDE.md max_eval_rounds as the upper bound for work eval_rounds
+- Codex reviewer is optional — if CODEX_AVAILABLE=false, proceed with Plan Reviewer only
+- Codex review task must be framed as read-only (no file edits)
