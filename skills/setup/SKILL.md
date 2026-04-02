@@ -143,13 +143,22 @@ Technical debt is a high-interest loan — pay it off incrementally rather than 
 Once a human taste preference is captured, apply it consistently across all code.
 ```
 
-### Step 6: Initialize rules directory
+### Step 6: Update .gitignore
+
+Add `.flowness-worktrees/` to the project's `.gitignore` (create the file if it doesn't exist):
+
+```
+# Flowness worktrees
+.flowness-worktrees/
+```
+
+### Step 7: Initialize rules directory
 
 The `harness/rules/` directory starts empty. Use `/rule` to add project-specific rules (conv-, pattern-, lib-). TDD is handled by the internal `flowness:tdd` skill, not as a rule.
 
 Do NOT copy RULES-GUIDE.md here — agents read it from `templates/rules/RULES-GUIDE.md` directly.
 
-### Step 7: Initialize eval-criteria defaults
+### Step 8: Initialize eval-criteria defaults
 
 Create two default evaluation criteria files that apply to any project:
 
@@ -163,7 +172,7 @@ Create two default evaluation criteria files that apply to any project:
 - Is test coverage adequate?
 - Are there no obvious bugs or anti-patterns?
 
-### Step 8: Summary
+### Step 9: Summary
 
 After creating all files, output a summary:
 - What scenario was detected (A/B/C)

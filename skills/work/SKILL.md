@@ -30,8 +30,7 @@ Resolve paths and create an isolated worktree for this topic:
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
-PROJECT_NAME=$(basename "$PROJECT_ROOT")
-WORKTREE_PATH="${PROJECT_ROOT}/../${PROJECT_NAME}-{topic-code}"
+WORKTREE_PATH="${PROJECT_ROOT}/.flowness-worktrees/{topic-code}"
 ```
 
 - If the worktree already exists at `{WORKTREE_PATH}`, reuse it (resume case)
