@@ -24,7 +24,15 @@ Topic code: $ARGUMENTS (e.g., H00001)
 
 Verify CLAUDE.md exists at the project root. If not, tell the user to run `/setup` first.
 
-### Step 1: Load context
+### Step 1: Create feature branch
+
+Check the current git branch:
+- If already on a branch named `feature/{topic-code}*`, continue on that branch
+- If on main/master (or any other branch), create and checkout: `git checkout -b feature/{topic-code}`
+
+This ensures all generated code is isolated from the main branch.
+
+### Step 2: Load context
 
 1. Read CLAUDE.md for project config (max_eval_rounds, eval_tool)
 2. Find the topic directory: glob for `harness/exec-plans/active/$ARGUMENTS_*/` to match the topic code
@@ -35,7 +43,7 @@ Verify CLAUDE.md exists at the project root. If not, tell the user to run `/setu
 
 If no matching topic directory is found, tell the user to run `/plan` first.
 
-### Step 2: Create build-contract
+### Step 3: Create build-contract
 
 Create `harness/exec-plans/active/{topic}/build-contract.md`:
 
@@ -65,7 +73,7 @@ Create `harness/exec-plans/active/{topic}/build-contract.md`:
 [any additional relevant criteria]
 ```
 
-### Step 3: Generator → Multi-Reviewer → Evaluator Loop
+### Step 4: Generator → Multi-Reviewer → Evaluator Loop
 
 Determine max rounds: min(plan-config.md eval_rounds, CLAUDE.md max_eval_rounds).
 
@@ -73,7 +81,7 @@ Execute the following loop, tracking the current round number starting from 1:
 
 #### Round N:
 
-**3a. Spawn Generator subagent**
+**4a. Spawn Generator subagent**
 
 Use the Agent tool with `subagent_type: flowness:generator` and pass this prompt:
 
@@ -95,11 +103,11 @@ Write your output to: harness/exec-plans/active/{topic}/build-result-r{N}.md
 
 Wait for the Generator subagent to complete.
 
-**3b. Verify build-result**
+**4b. Verify build-result**
 
 Read `harness/exec-plans/active/{topic}/build-result-r{N}.md` to confirm it was created.
 
-**3c. Spawn 5 Reviewer subagents in parallel**
+**4c. Spawn 5 Reviewer subagents in parallel**
 
 Spawn ALL 5 reviewers simultaneously using multiple Agent tool calls in a single message. Each reviewer focuses on a different perspective.
 
@@ -182,7 +190,7 @@ Return your findings as structured text. Do NOT create a file.
 
 Wait for ALL 5 reviewer subagents to complete.
 
-**3d. Aggregate review results**
+**4d. Aggregate review results**
 
 Collect the outputs from all 5 reviewers and create `harness/exec-plans/active/{topic}/code-review-r{N}.md`:
 
@@ -216,13 +224,13 @@ Determine the overall Status:
 - Any **critical** or **major** issue from ANY reviewer → **FAIL**
 - Only **minor** issues (or no issues) → **PASS**
 
-**3e. Check code review result**
+**4e. Check code review result**
 
 Read `harness/exec-plans/active/{topic}/code-review-r{N}.md`:
-- If Status is FAIL → skip Evaluator, go back to 3a (Generator fixes all reviewer findings first)
+- If Status is FAIL → skip Evaluator, go back to 4a (Generator fixes all reviewer findings first)
 - If Status is PASS → continue to Evaluator
 
-**3f. Spawn Evaluator subagent**
+**4f. Spawn Evaluator subagent**
 
 Use the Agent tool with `subagent_type: flowness:evaluator` and pass this prompt:
 
@@ -242,22 +250,22 @@ Write your output to: harness/exec-plans/active/{topic}/eval-result-r{N}.md
 
 Wait for the Evaluator subagent to complete.
 
-**3g. Check eval result**
+**4g. Check eval result**
 
 Read `harness/exec-plans/active/{topic}/eval-result-r{N}.md`:
-- If Status is PASS → exit loop, go to Step 4
+- If Status is PASS → exit loop, go to Step 5
 - If Status is FAIL and rounds remaining → increment round number, continue loop
-- If Status is FAIL and no rounds remaining → go to Step 5 (escalation)
+- If Status is FAIL and no rounds remaining → go to Step 6 (escalation)
 
-### Step 4: Success
+### Step 5: Success
 
 1. Move the topic directory from `harness/exec-plans/active/{topic}/` to `harness/exec-plans/completed/{topic}/`
 2. Update CLAUDE.md: move the topic from Active Topics to a Completed Topics section (or remove it)
 3. Output the latest eval-result-r{N}.md summary to the user
-4. Inform the user the build is complete
+4. Inform the user the build is complete and the branch `feature/{topic-code}` is ready for review
 5. Suggest running `/maintain` to update quality scores and docs
 
-### Step 5: Escalation - Human intervention needed
+### Step 6: Escalation - Human intervention needed
 
 1. Output the latest eval-result-r{N}.md and code-review-r{N}.md to the user
 2. List the unresolved issues
