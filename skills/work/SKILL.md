@@ -65,6 +65,10 @@ Round tasks (created per round):
   T-aggr-N    R{N}: Aggregate reviews            [blockedBy: T-rule-N,T-qual-N,T-sec-N,T-perf-N,T-arch-N]
   T-eval-N    R{N}: Evaluate                     [blockedBy: T-aggr-N]
 
+Review fix tasks (created on review FAIL, up to 3 iterations per round):
+  T-fix-N-F   R{N}.{F}: Fix review issues        [blockedBy: T-aggr-N or T-rerev-N-{F-1}]
+  T-rerev-N-F R{N}.{F}: Re-review                [blockedBy: T-fix-N-F]
+
 Completion task:
   T-final     Finalize topic                     [blockedBy: last T-eval]
 ```
@@ -173,13 +177,17 @@ TaskUpdate: T-subtasks → completed
 
 최대 라운드 = min(plan-config eval_rounds, CLAUDE.md max_eval_rounds). 라운드 1부터 루프:
 
+**핵심 원칙**: 라운드 카운터는 **평가(eval)가 실행될 때만** 증가합니다. 리뷰 실패 시에는 같은 라운드 내에서 즉시 수정하고 재리뷰합니다.
+
+최대 리뷰 수정 반복 = 3 (같은 라운드 내에서 리뷰 FAIL → 수정 → 재리뷰 최대 횟수)
+
 #### 라운드 N:
 
 **5a. 라운드 작업 생성**
 
 ```
 TaskCreate: "R{N}: Generate code", owner="generator",
-            addBlockedBy=[T-subtasks](R1) or [T-eval-{N-1}|T-aggr-{N-1}](R2+) → T-gen-N
+            addBlockedBy=[T-subtasks](R1) or [T-eval-{N-1}](R2+) → T-gen-N
 TaskCreate: "R{N}: Rule review", owner="rule-reviewer", addBlockedBy=[T-gen-N] → T-rule-N
 TaskCreate: "R{N}: Quality review", owner="quality-reviewer", addBlockedBy=[T-gen-N] → T-qual-N
 TaskCreate: "R{N}: Security review", owner="security-reviewer", addBlockedBy=[T-gen-N] → T-sec-N
@@ -207,8 +215,35 @@ TaskCreate: "R{N}: Evaluate", owner="evaluator", addBlockedBy=[T-aggr-N] → T-e
 **5d. 리뷰 결과 확인**
 
 `code-review-r{N}.md`를 읽습니다:
-- **FAIL** → `TaskUpdate: T-eval-N → deleted`, 다음 라운드 (5a로 이동)
-- **PASS** → 계속 진행
+- **PASS** → 5e로 계속 진행
+- **FAIL** → 5d-fix 진입 (리뷰 수정 루프)
+
+**5d-fix. 리뷰 수정 루프** (같은 라운드 N 내에서 반복)
+
+리뷰 수정 반복 카운터 `F`를 1부터 시작합니다:
+
+1. 수정 작업 생성:
+   ```
+   TaskCreate: "R{N}.{F}: Fix review issues", owner="generator", activeForm="Fixing review issues" → T-fix-N-F
+   TaskUpdate: T-fix-N-F → in_progress
+   ```
+
+2. Generator를 수정 모드로 호출합니다:
+   호출: `Skill: flowness:internal-generate, args="round={N} fix={F} worktree={WORKTREE_PATH} topic={topic-dir} spec={spec-file} strategy=single task-id={T-fix-N-F}"`
+   - Generator는 `code-review-r{N}.md` (또는 `code-review-r{N}.{F-1}.md`)를 읽고 이슈를 수정합니다
+   - 출력: `build-result-r{N}.{F}.md`
+
+3. 재리뷰 작업 생성 및 실행:
+   ```
+   TaskCreate: "R{N}.{F}: Re-review", activeForm="Re-reviewing fixes" → T-rerev-N-F
+   ```
+   호출: `Skill: flowness:internal-review, args="round={N} fix={F} worktree={WORKTREE_PATH} topic={topic-dir} task-ids={T-rerev-N-F}"`
+   - 출력: `code-review-r{N}.{F}.md`
+
+4. 재리뷰 결과 확인:
+   - **PASS** → 5e로 계속 진행
+   - **FAIL** + `F < 3` → `F++`, 5d-fix의 1번으로 돌아감
+   - **FAIL** + `F >= 3` → `TaskUpdate: T-eval-N → deleted`, 라운드 증가, 5a로 이동
 
 **5e. 평가**
 

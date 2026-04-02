@@ -18,6 +18,7 @@ $ARGUMENTS에서 파싱합니다:
 | 키 | 필수 | 설명 |
 |-----|----------|-------------|
 | `round` | 예 | 현재 라운드 번호 |
+| `fix` | 선택 | 리뷰 수정 반복 번호 (리뷰 FAIL 후 수정 모드) |
 | `worktree` | 예 | 메인 토픽 worktree 절대 경로 |
 | `topic` | 예 | 토픽 디렉토리 이름 (예: `H20260402143022_feature-name`) |
 | `spec` | 예 | 제품 스펙 파일명 (예: `feature-name.md`) |
@@ -90,9 +91,42 @@ Write your output to: {ST_PATH}/harness/exec-plans/active/{topic}/build-result-r
 
 모든 `build-result-r{round}-{NN}.md`를 통합하여 `{worktree}/harness/exec-plans/active/{topic}/build-result-r{round}.md`를 생성합니다.
 
+### 수정 모드 (`fix` 파라미터가 있는 경우)
+
+리뷰에서 발견된 이슈를 수정하기 위한 모드입니다. 병렬 전략과 무관하게 항상 단일 Generator를 생성합니다.
+
+리뷰 파일 경로를 결정합니다:
+- `fix=1`이면: `code-review-r{round}.md` (최초 리뷰 결과)
+- `fix>1`이면: `code-review-r{round}.{fix-1}.md` (이전 재리뷰 결과)
+
+Agent 도구를 통해 하나의 Generator를 생성합니다 (`subagent_type: flowness:generator`):
+
+```
+Round: {round}, Fix: {fix}
+Project root: {worktree}
+Topic directory: {worktree}/harness/exec-plans/active/{topic}/
+
+MODE: REVIEW FIX — 리뷰에서 발견된 이슈만 수정합니다.
+
+Files to read:
+- {worktree}/harness/exec-plans/active/{topic}/build-contract.md
+- {worktree}/harness/product-specs/{spec}
+- {review file path determined above}
+- {worktree}/harness/exec-plans/active/{topic}/build-result-r{round}.md (or build-result-r{round}.{fix-1}.md)
+- Applicable rule folders listed in build-contract.md
+
+Write your output to: {worktree}/harness/exec-plans/active/{topic}/build-result-r{round}.{fix}.md
+```
+
+완료될 때까지 대기합니다.
+
 ### 검증
 
-`build-result-r{round}.md`가 존재하고 비어있지 않은지 확인합니다.
+출력 파일 경로를 결정합니다:
+- `fix` 파라미터가 없으면: `build-result-r{round}.md`
+- `fix` 파라미터가 있으면: `build-result-r{round}.{fix}.md`
+
+해당 파일이 존재하고 비어있지 않은지 확인합니다.
 
 `task-id`가 제공된 경우: `TaskUpdate: task-id → completed`
 

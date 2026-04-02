@@ -18,9 +18,10 @@ $ARGUMENTS에서 파싱합니다:
 | 키 | 필수 | 설명 |
 |-----|----------|-------------|
 | `round` | 예 | 현재 라운드 번호 |
+| `fix` | 선택 | 리뷰 수정 반복 번호 (재리뷰 모드) |
 | `worktree` | 예 | 메인 토픽 worktree 절대 경로 |
 | `topic` | 예 | 토픽 디렉토리 이름 |
-| `task-ids` | 선택 | 쉼표로 구분된 작업 ID 순서: rule, quality, security, performance, architecture, aggregate |
+| `task-ids` | 선택 | 쉼표로 구분된 작업 ID 순서: rule, quality, security, performance, architecture, aggregate (또는 재리뷰 시 단일 ID) |
 
 ## 프로세스
 
@@ -64,7 +65,11 @@ Return your findings as structured text. Do NOT create a file.
 
 `task-ids`가 제공된 경우, 6번째(집계) 작업 ID를 `in_progress`로 표시합니다.
 
-`{worktree}/harness/exec-plans/active/{topic}/code-review-r{round}.md`를 생성합니다:
+출력 파일 경로를 결정합니다:
+- `fix` 파라미터가 없으면: `code-review-r{round}.md`
+- `fix` 파라미터가 있으면: `code-review-r{round}.{fix}.md`
+
+해당 파일을 생성합니다:
 
 ```markdown
 # Code Review
@@ -92,9 +97,18 @@ Return your findings as structured text. Do NOT create a file.
 - Blocking: {list of critical + major issues}
 ```
 
-**상태 결정:**
-- 어떤 리뷰어에서든 **critical** 또는 **major** 이슈가 있으면 → **FAIL**
-- **minor** 이슈만 있거나 이슈가 없으면 → **PASS**
+**상태 결정 (기계적으로 판단 — 리뷰어의 주관적 판단으로 오버라이드 불가):**
+
+1. 각 이슈를 분류합니다:
+   - `[WARN-*]` 접두사: 기존 예외 (build-contract의 Pre-existing Exceptions) → **카운트에서 제외**
+   - `[critical]` / `[major]` / `[minor]`: 이번 라운드에서 도입된 이슈 → **카운트 대상**
+
+2. 판정:
+   - 이번 라운드 도입 **critical** 이슈가 1개 이상 → **FAIL**
+   - 이번 라운드 도입 **major** 이슈가 1개 이상 → **FAIL**
+   - **minor** 이슈만 있거나 이슈 없음 → **PASS**
+
+**중요**: "pragmatic tradeoff", "documented workaround" 등의 이유로 major/critical 이슈를 PASS 처리하지 마세요. 이슈가 정당하다면 Generator가 수정해야 합니다.
 
 `task-ids`가 제공된 경우, 집계 작업 ID를 `completed`로 표시합니다.
 
