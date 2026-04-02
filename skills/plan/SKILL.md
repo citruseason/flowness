@@ -164,20 +164,12 @@ Write your review to: harness/exec-plans/active/{topic}/plan-review-result.md
 
 **Reviewer 2: Codex Technical Reviewer** _(only if CODEX_AVAILABLE=true)_
 
-Use the Agent tool with `subagent_type: codex:codex-rescue` and pass this prompt:
+Use the Agent tool with `subagent_type: flowness:codex-plan-reviewer` and pass this prompt:
 
 ```
-Review the product specification at harness/product-specs/{topic-name}.md for technical feasibility. This is a read-only review — do not modify any files.
-
-Focus on:
-1. Technical feasibility — can this be built with the tech stack described in ARCHITECTURE.md?
-2. Implementation clarity — is there enough detail for a developer to implement without guessing?
-3. Hidden complexity — dependencies, edge cases, or integrations the spec underestimates?
-4. Architectural alignment — does the spec respect the layer boundaries in ARCHITECTURE.md?
-
-Return a structured response with:
-- Status: PASS or FAIL
-- Issues: list of blocking concerns (FAIL) or minor notes (PASS)
+Round: {N}
+Product spec: harness/product-specs/{topic-name}.md
+Topic directory: harness/exec-plans/active/{topic}/
 ```
 
 Wait for ALL spawned reviewers to complete.
