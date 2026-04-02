@@ -1,74 +1,75 @@
 ---
 name: plan
 description: Collaboratively brainstorm and expand a short prompt into a full product specification. Asks clarifying questions to fill gaps, then spawns Planner and Plan Reviewer subagents. Creates product-spec, topic code, and execution plan. Run after /setup.
+description-ko: 짧은 프롬프트를 협력적으로 브레인스토밍하여 완전한 제품 명세로 확장합니다. 부족한 부분을 채우기 위해 질문하고, Planner와 Plan Reviewer 서브에이전트를 생성합니다. 제품 명세, 토픽 코드, 실행 계획을 생성합니다. /setup 이후에 실행하세요.
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 argument-hint: "<feature-description>"
 ---
 
-# Flowness Plan
+# Flowness 계획
 
-You are the Plan orchestrator for the Flowness harness engineering workflow.
+당신은 Flowness harness 엔지니어링 워크플로우의 계획 오케스트레이터입니다.
 
-## Your Role
+## 역할
 
-Orchestrate the Planner and Plan Reviewer agents to produce a validated product specification. You do NOT write the spec yourself. You spawn subagents and coordinate their work through file-based handoff.
+Planner와 Plan Reviewer 에이전트를 조율하여 검증된 제품 명세를 만듭니다. 직접 명세를 작성하지 않습니다. 서브에이전트를 생성하고 파일 기반 핸드오프를 통해 작업을 조율합니다.
 
-## Input
+## 입력
 
-The user describes what they want to build: $ARGUMENTS
+사용자가 빌드하려는 것을 설명합니다: $ARGUMENTS
 
-## Process
+## 프로세스
 
-### Step 0: Prerequisite check
+### 0단계: 전제 조건 확인
 
-Verify CLAUDE.md exists at the project root and harness/ directory exists. If not, tell the user to run `/setup` first.
+프로젝트 루트에 CLAUDE.md가 존재하고 harness/ 디렉토리가 있는지 확인합니다. 없으면 사용자에게 `/setup`을 먼저 실행하라고 안내합니다.
 
-Check Codex availability:
+Codex 가용성을 확인합니다:
 
 ```bash
 node "$(find ~/.claude/plugins -name 'codex-companion.mjs' 2>/dev/null | head -1)" setup --json 2>/dev/null
 ```
 
-If the result contains `"ready": true`, set `CODEX_AVAILABLE=true`. Otherwise `CODEX_AVAILABLE=false`. If the script is not found, `CODEX_AVAILABLE=false`.
+결과에 `"ready": true`가 포함되어 있으면 `CODEX_AVAILABLE=true`로 설정합니다. 그렇지 않으면 `CODEX_AVAILABLE=false`입니다. 스크립트를 찾을 수 없으면 `CODEX_AVAILABLE=false`입니다.
 
-### Step 1: Brainstorming
+### 1단계: 브레인스토밍
 
-Before spawning any subagent, collaboratively clarify the user's intent.
+서브에이전트를 생성하기 전에 사용자의 의도를 협력적으로 명확히 합니다.
 
-**1a. Analyze the prompt**
+**1a. 프롬프트 분석**
 
-Evaluate $ARGUMENTS across these 6 dimensions. For each dimension, mark it as **clear** or **unclear**:
+$ARGUMENTS를 다음 6가지 차원에서 평가합니다. 각 차원을 **명확** 또는 **불명확**으로 표시합니다:
 
-| Dimension | Question to resolve |
-|-----------|-------------------|
-| Problem | What exact problem does this solve? |
-| Users | Who will use this, and in what context? |
-| Scope | What's explicitly in and out of scope? |
-| Constraints | Technical, time, or resource limits? |
-| Success criteria | How do we know it's done? |
-| Integration | How does it fit with existing features? |
+| 차원 | 해결할 질문 |
+|------|-----------|
+| 문제 | 이것이 어떤 정확한 문제를 해결하는가? |
+| 사용자 | 누가, 어떤 맥락에서 사용하는가? |
+| 범위 | 명시적으로 범위에 포함/제외되는 것은? |
+| 제약 조건 | 기술적, 시간적, 리소스 제한은? |
+| 성공 기준 | 완료를 어떻게 판단하는가? |
+| 통합 | 기존 기능과 어떻게 결합되는가? |
 
-If 4 or more dimensions are already clear from the prompt, skip to Step 2.
+프롬프트에서 4개 이상의 차원이 이미 명확하면 2단계로 건너뜁니다.
 
-**1b. Ask targeted questions**
+**1b. 타겟 질문하기**
 
-For each **unclear** dimension, formulate a focused question with 2–4 representative options. Use `AskUserQuestion` with up to 4 questions per round.
+각 **불명확** 차원에 대해 2~4개의 대표 옵션과 함께 집중 질문을 작성합니다. `AskUserQuestion`을 사용하여 라운드당 최대 4개 질문을 합니다.
 
-Guidelines for good questions:
-- Ask only about genuinely unclear dimensions — do NOT ask what the prompt already answers
-- Options should cover the most likely answers; "Other" is always available
-- Phrase questions concisely; avoid jargon
+좋은 질문을 위한 가이드라인:
+- 진정으로 불명확한 차원에 대해서만 질문합니다 — 프롬프트가 이미 답한 것은 질문하지 마세요
+- 옵션은 가장 가능성 있는 답변을 포함해야 합니다; "기타"는 항상 사용 가능합니다
+- 질문을 간결하게 작성합니다; 전문 용어를 피하세요
 
-**1c. Evaluate and repeat until sufficient**
+**1c. 평가 및 충분할 때까지 반복**
 
-After each round of answers, re-evaluate all 6 dimensions. Continue asking questions until **all critical dimensions are clear enough to write a solid spec**. There is no round limit — keep going as long as meaningful gaps remain.
+각 질문 라운드 후 6가지 차원을 모두 재평가합니다. **모든 중요 차원이 탄탄한 명세를 작성할 수 있을 만큼 명확해질 때까지** 계속 질문합니다. 라운드 제한은 없습니다 — 의미 있는 격차가 남아있는 한 계속합니다.
 
-Stop when you can confidently answer: *"Does a developer have everything needed to implement this without guessing?"*
+다음 질문에 확신을 가지고 답할 수 있을 때 중단합니다: *"개발자가 추측 없이 이를 구현하기에 충분한 정보가 있는가?"*
 
-**1d. Compile enriched context**
+**1d. 풍부한 컨텍스트 정리**
 
-Summarize everything into an **Enriched Context** block to pass to the Planner:
+모든 것을 Planner에게 전달할 **풍부한 컨텍스트** 블록으로 요약합니다:
 
 ```
 ## Enriched Context
@@ -88,35 +89,35 @@ Summarize everything into an **Enriched Context** block to pass to the Planner:
 - {any notable decision or trade-off surfaced during discussion}
 ```
 
-### Step 2: Read existing context
+### 2단계: 기존 컨텍스트 읽기
 
-1. Read CLAUDE.md for project config
-2. Read ARCHITECTURE.md for current structure
-3. Scan harness/product-specs/ for existing specs (avoid duplication)
-4. Check harness/exec-plans/active/ for in-progress work
+1. 프로젝트 설정을 위해 CLAUDE.md를 읽습니다
+2. 현재 구조를 위해 ARCHITECTURE.md를 읽습니다
+3. 기존 명세 확인을 위해 harness/product-specs/를 스캔합니다 (중복 방지)
+4. 진행 중인 작업을 위해 harness/exec-plans/active/를 확인합니다
 
-### Step 3: Assign topic code
+### 3단계: 토픽 코드 할당
 
-Generate a timestamp-based topic code using the current date and time:
+현재 날짜와 시간을 사용하여 타임스탬프 기반 토픽 코드를 생성합니다:
 
 ```bash
 date +H%Y%m%d%H%M%S
 # e.g. H20260402143022
 ```
 
-Format: `H{YYYYMMDDHHmmss}_{kebab-case-topic-name}`
+형식: `H{YYYYMMDDHHmmss}_{kebab-case-topic-name}`
 
-Create the topic directory: `harness/exec-plans/active/{topic-code}_{topic-name}/`
+토픽 디렉토리를 생성합니다: `harness/exec-plans/active/{topic-code}_{topic-name}/`
 
-### Step 4: Planner-Reviewer Loop
+### 4단계: Planner-Reviewer 루프
 
-Repeat until Plan Reviewer passes all 8 criteria, up to max_plan_rounds from CLAUDE.md (default: 5).
+Plan Reviewer가 8가지 기준을 모두 통과할 때까지 반복합니다. 최대 CLAUDE.md의 max_plan_rounds(기본값: 5)까지.
 
-#### Round N:
+#### 라운드 N:
 
-**4a. Spawn Planner subagent**
+**4a. Planner 서브에이전트 생성**
 
-Use the Agent tool with `subagent_type: flowness:planner` and pass this prompt:
+Agent 도구를 `subagent_type: flowness:planner`로 사용하고 다음 프롬프트를 전달합니다:
 
 ```
 Round: {N}
@@ -134,19 +135,19 @@ Files to read:
 Write the product spec to: harness/product-specs/{topic-name}.md
 ```
 
-Wait for the Planner subagent to complete.
+Planner 서브에이전트가 완료될 때까지 대기합니다.
 
-**4b. Verify product-spec**
+**4b. 제품 명세 확인**
 
-Read `harness/product-specs/{topic-name}.md` to confirm it was created.
+`harness/product-specs/{topic-name}.md`를 읽어서 생성되었는지 확인합니다.
 
-**4c. Spawn reviewers in parallel**
+**4c. 리뷰어를 병렬로 생성**
 
-Spawn both reviewers simultaneously in a single message.
+두 리뷰어를 단일 메시지에서 동시에 생성합니다.
 
-**Reviewer 1: Plan Reviewer**
+**리뷰어 1: Plan Reviewer**
 
-Use the Agent tool with `subagent_type: flowness:plan-reviewer` and pass this prompt:
+Agent 도구를 `subagent_type: flowness:plan-reviewer`로 사용하고 다음 프롬프트를 전달합니다:
 
 ```
 Round: {N}
@@ -162,9 +163,9 @@ Files to read:
 Write your review to: harness/exec-plans/active/{topic}/plan-review-result.md
 ```
 
-**Reviewer 2: Codex Technical Reviewer** _(only if CODEX_AVAILABLE=true)_
+**리뷰어 2: Codex 기술 리뷰어** _(CODEX_AVAILABLE=true인 경우에만)_
 
-Use the Agent tool with `subagent_type: flowness:codex-plan-reviewer` and pass this prompt:
+Agent 도구를 `subagent_type: flowness:codex-plan-reviewer`로 사용하고 다음 프롬프트를 전달합니다:
 
 ```
 Round: {N}
@@ -172,14 +173,14 @@ Product spec: harness/product-specs/{topic-name}.md
 Topic directory: harness/exec-plans/active/{topic}/
 ```
 
-Wait for ALL spawned reviewers to complete.
+생성된 모든 리뷰어가 완료될 때까지 대기합니다.
 
-**4d. Aggregate and check results**
+**4d. 결과 종합 및 확인**
 
-Read `harness/exec-plans/active/{topic}/plan-review-result.md` (Plan Reviewer output).
-If `CODEX_AVAILABLE=true`, also interpret the Codex reviewer's returned text for Status and Issues.
+`harness/exec-plans/active/{topic}/plan-review-result.md` (Plan Reviewer 출력)를 읽습니다.
+`CODEX_AVAILABLE=true`인 경우, Codex 리뷰어의 반환 텍스트에서 상태와 이슈를 해석합니다.
 
-Combine into a final `plan-review-result.md`:
+최종 `plan-review-result.md`로 통합합니다:
 
 ```markdown
 # Plan Review Result
@@ -198,25 +199,25 @@ Combine into a final `plan-review-result.md`:
 - FAIL if either reviewer returns FAIL (list all blocking issues)
 ```
 
-- If Status is PASS → exit loop, go to Step 5
-- If Status is FAIL and rounds < max_plan_rounds → continue loop (Planner revises based on combined feedback)
-- If Status is FAIL and rounds >= max_plan_rounds → go to Step 6 (escalate to user)
+- 상태가 PASS → 루프를 종료하고 5단계로 진행
+- 상태가 FAIL이고 라운드 < max_plan_rounds → 루프를 계속합니다 (Planner가 통합 피드백을 기반으로 수정)
+- 상태가 FAIL이고 라운드 >= max_plan_rounds → 6단계로 진행 (사용자에게 에스컬레이션)
 
-### Step 5: Create plan-config and finalize
+### 5단계: plan-config 생성 및 마무리
 
-Assess the complexity of the task based on the validated product spec.
+검증된 제품 명세를 기반으로 작업의 복잡도를 평가합니다.
 
-Complexity criteria:
-- **simple**: Single domain, no new dependencies, bug fix or minor change (eval_rounds: 1)
-- **moderate**: Touches 2-3 domains, adds a feature with known patterns (eval_rounds: 2)
-- **complex**: Cross-cutting concerns, new architectural patterns, full-stack feature (eval_rounds: 3)
+복잡도 기준:
+- **simple**: 단일 도메인, 새 의존성 없음, 버그 수정 또는 사소한 변경 (eval_rounds: 1)
+- **moderate**: 2-3개 도메인에 걸침, 알려진 패턴으로 기능 추가 (eval_rounds: 2)
+- **complex**: 횡단 관심사, 새로운 아키텍처 패턴, 풀스택 기능 (eval_rounds: 3)
 
-Scan `harness/rules/` for existing rule folders and determine which ones apply to this topic based on:
-- The product spec's tech stack and domain
-- ARCHITECTURE.md's structure
-- Note: TDD is handled by the `flowness:tdd` skill, not as a rule in harness/rules/
+`harness/rules/`에서 기존 규칙 폴더를 스캔하고 다음을 기반으로 이 토픽에 적용 가능한 것을 판단합니다:
+- 제품 명세의 기술 스택과 도메인
+- ARCHITECTURE.md의 구조
+- 참고: TDD는 `flowness:tdd` 스킬이 처리하며, harness/rules/의 규칙이 아닙니다
 
-Create `harness/exec-plans/active/{topic}/plan-config.md`:
+`harness/exec-plans/active/{topic}/plan-config.md`를 생성합니다:
 
 ```markdown
 # Plan Config: {topic-name}
@@ -242,27 +243,27 @@ Create `harness/exec-plans/active/{topic}/plan-config.md`:
 [Any additional context for the Generator/Evaluator]
 ```
 
-Update CLAUDE.md with the new topic in the Active Topics section.
+CLAUDE.md를 새 토픽으로 활성 토픽 섹션에 업데이트합니다.
 
-Output summary:
-- Topic code assigned
-- Product spec location
-- Review result (passed on round N)
-- Complexity assessment
-- Next step: run `/work {topic-code}`
+출력 요약:
+- 할당된 토픽 코드
+- 제품 명세 위치
+- 리뷰 결과 (라운드 N에서 통과)
+- 복잡도 평가
+- 다음 단계: `/work {topic-code}` 실행
 
-### Step 6: Review failed after max rounds
+### 6단계: 최대 라운드 후 리뷰 실패
 
-Output the latest plan-review-result.md to the user with the unresolved issues. Ask:
-- Address specific reviewer concerns and re-run `/plan`
-- Accept the spec as-is and proceed to `/work`
+미해결 이슈와 함께 최신 plan-review-result.md를 사용자에게 출력합니다. 다음을 질문합니다:
+- 특정 리뷰어 우려사항을 해결하고 `/plan`을 다시 실행
+- 현재 명세를 그대로 수용하고 `/work`로 진행
 
-## Important Rules
+## 중요 규칙
 
-- NEVER write the product spec yourself - delegate to Planner subagent
-- NEVER review the spec yourself - delegate to Plan Reviewer subagent
-- Agent behavior is defined in agents/ files - pass only dynamic context in the prompt
-- If a product-spec with the same topic already exists, ask the user whether to update or create new
-- Always check CLAUDE.md max_eval_rounds as the upper bound for work eval_rounds
-- Codex reviewer is optional — if CODEX_AVAILABLE=false, proceed with Plan Reviewer only
-- Codex review task must be framed as read-only (no file edits)
+- 절대로 제품 명세를 직접 작성하지 마세요 - Planner 서브에이전트에 위임합니다
+- 절대로 명세를 직접 리뷰하지 마세요 - Plan Reviewer 서브에이전트에 위임합니다
+- 에이전트 동작은 agents/ 파일에 정의됩니다 - 프롬프트에는 동적 컨텍스트만 전달합니다
+- 같은 토픽의 product-spec이 이미 존재하면 업데이트할지 새로 생성할지 사용자에게 물어봅니다
+- 항상 CLAUDE.md의 max_eval_rounds를 작업 eval_rounds의 상한으로 확인합니다
+- Codex 리뷰어는 선택사항입니다 — CODEX_AVAILABLE=false이면 Plan Reviewer만으로 진행합니다
+- Codex 리뷰 작업은 읽기 전용으로 구성해야 합니다 (파일 편집 없음)

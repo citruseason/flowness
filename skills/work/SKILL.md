@@ -1,400 +1,269 @@
 ---
 name: work
 description: Execute the Build loop for a topic. Spawns Generator, multi-perspective Reviewers, and Evaluator subagents that communicate via files. Run after /plan. Use when ready to implement a planned feature.
+description-ko: 토픽에 대한 빌드 루프를 실행합니다. Generator, 다중 관점 Reviewer, Evaluator 서브에이전트를 생성하여 파일을 통해 소통합니다. /plan 이후에 실행합니다. 계획된 기능을 구현할 준비가 되었을 때 사용합니다.
 user-invocable: true
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Skill, TaskCreate, TaskUpdate, TaskList
 argument-hint: "<topic-code>"
 ---
 
-# Flowness Work
+# Flowness 작업
 
-You are the Work orchestrator for the Flowness harness engineering workflow.
+당신은 Flowness harness 엔지니어링 워크플로우의 작업 오케스트레이터입니다.
 
-## Your Role
+## 역할
 
-Orchestrate the Generator → Multi-Reviewer → Evaluator pipeline for a given topic. You do NOT write code yourself. You spawn subagents and coordinate their work through file-based handoff.
+순수 **상태 머신**: 작업을 관리하고, 각 단계에 대해 내부 스킬을 호출하며, 루프 결정을 내립니다. 코드를 직접 작성, 리뷰 또는 평가하지 않습니다 — 각 단계는 전용 내부 스킬에 위임됩니다.
 
-## Input
+## 내부 스킬
 
-Topic code: $ARGUMENTS (e.g., H20260402143022)
+| 단계 | 스킬 | 호출 방법 |
+|------|------|----------|
+| 워크트리 | `flowness:internal-worktree` | `setup`, `create-subtask`, `merge-subtasks`, `cleanup-subtask` |
+| 생성 | `flowness:internal-generate` | Generator를 생성하고 `build-result-r{N}.md`를 출력 |
+| 리뷰 | `flowness:internal-review` | 5개 Reviewer를 생성하고 `code-review-r{N}.md`를 출력 |
+| 평가 | `flowness:internal-evaluate` | Evaluator를 생성하고 `eval-result-r{N}.md`를 출력 |
 
-## Process
+## 작업 추적
 
-### Step 0: Prerequisite check
+### 규칙
 
-Verify CLAUDE.md exists at the project root. If not, tell the user to run `/setup` first.
+- **작업 ID를 추적합니다** — 의존성과 내부 스킬에 전달하기 위해 필요합니다
+- 시작 전에 `in_progress`로, 완료 시 `completed`로 표시합니다
+- 스피너 텍스트에 `activeForm`을 사용합니다 (현재 진행형)
+- 라운드 작업은 `R{N}:` 접두사를 사용합니다
+- 서브에이전트 작업에는 `owner`를 서브에이전트 유형으로 설정합니다
+- 라운드별 작업은 **각 라운드 시작 시** 생성합니다
+- 작업이 건너뛰어지면 (예: 리뷰 FAIL 후 eval) 상태를 `deleted`로 설정합니다
 
-### Step 1: Create git worktree
+### 라운드별 작업 구조
 
-Resolve paths and create an isolated worktree for this topic:
+```
+Phase tasks (created once):
+  T-setup     Setup worktree and load context
+  T-contract  Create build contract              [blockedBy: T-setup]
+  T-subtasks  Plan sub-tasks                     [blockedBy: T-contract]
 
-```bash
-PROJECT_ROOT=$(git rev-parse --show-toplevel)
-WORKTREE_PATH="${PROJECT_ROOT}/.flowness-worktrees/{topic-code}"
+Round tasks (created per round):
+  T-gen-N     R{N}: Generate code                [blockedBy: T-subtasks or T-eval-{N-1}]
+  T-rule-N    R{N}: Rule review                  [blockedBy: T-gen-N]
+  T-qual-N    R{N}: Quality review               [blockedBy: T-gen-N]
+  T-sec-N     R{N}: Security review              [blockedBy: T-gen-N]
+  T-perf-N    R{N}: Performance review           [blockedBy: T-gen-N]
+  T-arch-N    R{N}: Architecture review          [blockedBy: T-gen-N]
+  T-aggr-N    R{N}: Aggregate reviews            [blockedBy: T-rule-N,T-qual-N,T-sec-N,T-perf-N,T-arch-N]
+  T-eval-N    R{N}: Evaluate                     [blockedBy: T-aggr-N]
+
+Completion task:
+  T-final     Finalize topic                     [blockedBy: last T-eval]
 ```
 
-- If the worktree already exists at `{WORKTREE_PATH}`, reuse it (resume case)
-- Otherwise: `git worktree add -b topic/{topic-code} {WORKTREE_PATH}`
+## 입력
 
-All subsequent file operations happen inside `{WORKTREE_PATH}`. The main working directory stays untouched.
+토픽 코드: $ARGUMENTS (예: H20260402143022)
 
-### Step 2: Load context
+## 프로세스
 
-All paths below are relative to `{WORKTREE_PATH}`:
+### 0단계: 전제 조건 확인
 
-1. Read `CLAUDE.md` for project config (max_eval_rounds, eval_tool)
-2. Find the topic directory: glob for `harness/exec-plans/active/$ARGUMENTS_*/`
-3. Read `plan-config.md` for dynamic settings (eval_rounds, complexity)
-4. Read the referenced product-spec from `harness/product-specs/`
-5. Read relevant eval-criteria/ files listed in CLAUDE.md
-6. Identify applicable rules from plan-config.md
+프로젝트 루트에 CLAUDE.md가 존재하는지 확인합니다. 없으면 사용자에게 `/setup`을 먼저 실행하라고 안내합니다.
 
-If no matching topic directory is found, tell the user to run `/plan` first.
+### 1단계: 워크트리 설정
 
-### Step 3: Create build-contract
+```
+TaskCreate: "Setup worktree and load context", activeForm="Setting up worktree" → T-setup
+TaskUpdate: T-setup → in_progress
+```
 
-Create `{WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-contract.md`:
+호출: `Skill: flowness:internal-worktree, args="setup {topic-code}"`
+
+출력 `WORKTREE_PATH`를 캡처합니다. 이후 모든 경로는 이에 상대적입니다.
+
+### 2단계: 컨텍스트 로드
+
+1. `{WORKTREE_PATH}/CLAUDE.md`를 읽습니다 — 프로젝트 설정 (max_eval_rounds, eval_tool)
+2. `{WORKTREE_PATH}/harness/exec-plans/active/$ARGUMENTS_*/`를 Glob합니다 — 토픽 디렉토리 찾기
+3. `plan-config.md`를 읽습니다 — 동적 설정 (eval_rounds, 복잡도)
+4. `{WORKTREE_PATH}/harness/product-specs/`에서 제품 명세를 읽습니다
+5. CLAUDE.md에서 eval-criteria/ 파일을 읽습니다
+6. plan-config.md에서 적용 가능한 규칙을 식별합니다
+
+토픽 디렉토리를 찾을 수 없으면 사용자에게 `/plan`을 먼저 실행하라고 안내합니다.
+
+```
+TaskUpdate: T-setup → completed
+```
+
+### 3단계: 빌드 계약 생성
+
+```
+TaskCreate: "Create build contract", activeForm="Creating build contract", addBlockedBy=[T-setup] → T-contract
+TaskUpdate: T-contract → in_progress
+```
+
+`{WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-contract.md`를 생성합니다:
 
 ```markdown
 # Build Contract: {topic-name}
 
 ## Scope
-[What will be built in this cycle, derived from product-spec]
+[What will be built, derived from product-spec]
 
 ## Completion Criteria
-[Specific, testable criteria the Evaluator will verify]
 - [ ] Criterion 1: ...
-- [ ] Criterion 2: ...
-- [ ] Criterion 3: ...
 
 ## Referenced Spec
 - product-specs/{topic-name}.md
 
 ## Applicable Rules
-[Rule folders from plan-config.md that apply to this topic]
-- rules/{prefix}-{name}/
 - rules/{prefix}-{name}/
 
 ## Eval Criteria Files
 - eval-criteria/functionality.md
 - eval-criteria/code-quality.md
-[any additional relevant criteria]
 
 ## Pre-existing Exceptions
-[Known violations that exist BEFORE this topic and are OUT OF SCOPE to fix here.
-Reviewers must treat these as WARN only — never FAIL.]
-- [file/pattern]: [reason it's excluded]
+[Known violations BEFORE this topic — reviewers treat as WARN only.]
 ```
 
-### Step 4: Sub-task planning
+```
+TaskUpdate: T-contract → completed
+```
 
-Analyze the build-contract and ARCHITECTURE.md to determine if the work can be parallelized.
+### 4단계: 하위 작업 계획
 
-**Partitioning rule**: Each file may be owned by at most one sub-task. Sub-tasks that would touch the same file must be merged into one sub-task.
+```
+TaskCreate: "Plan sub-tasks", activeForm="Planning sub-tasks", addBlockedBy=[T-contract] → T-subtasks
+TaskUpdate: T-subtasks → in_progress
+```
 
-Create `{WORKTREE_PATH}/harness/exec-plans/active/{topic}/sub-tasks.md`:
+build-contract와 ARCHITECTURE.md를 분석합니다. **분할 규칙**: 각 파일은 최대 하나의 하위 작업에만 소유됩니다.
+
+`{WORKTREE_PATH}/harness/exec-plans/active/{topic}/sub-tasks.md`를 생성합니다:
 
 ```markdown
 # Sub-tasks: {topic-name}
 
 ## Strategy: parallel | single
-[parallel if 2+ independent sub-tasks exist, single otherwise]
 
 ## Sub-task 01: {name}
 - Scope: [what to implement]
-- Owns: [exclusive list of files/directories this sub-task will create or modify]
-- Criteria: [completion criteria from build-contract that this sub-task covers]
-
-## Sub-task 02: {name}
-- Scope: [what to implement]
-- Owns: [exclusive list of files/directories]
+- Owns: [exclusive file list]
 - Criteria: [criteria covered]
 ```
 
-If Strategy is `single`, skip sub-task worktree creation — proceed with a single Generator on `{WORKTREE_PATH}`.
-
-### Step 5: Build loop
-
-Determine max rounds: min(plan-config.md eval_rounds, CLAUDE.md max_eval_rounds).
-
-Execute the following loop, tracking the current round number starting from 1:
-
-#### Round N:
-
-**5a. Spawn Generator(s)**
-
-**If Round 1 AND Strategy is `parallel`:**
-
-For each sub-task `{NN}` (01, 02, ...):
-- Create sub-task worktree branched from `topic/{topic-code}`:
-  ```bash
-  git worktree add -b topic/{topic-code}-{NN} \
-    {PROJECT_ROOT}/.flowness-worktrees/{topic-code}-{NN}
-  ```
-- Sub-task worktree path: `{ST_PATH}` = `{PROJECT_ROOT}/.flowness-worktrees/{topic-code}-{NN}`
-
-Spawn ALL Generator subagents simultaneously in a single message:
-
-For each sub-task, use the Agent tool with `subagent_type: flowness:generator`:
+`single`이면 하위 작업 워크트리가 필요 없습니다.
 
 ```
-Round: {N}
-Project root: {ST_PATH}
-Topic directory: {ST_PATH}/harness/exec-plans/active/{topic}/
-Product spec: {ST_PATH}/harness/product-specs/{topic-name}.md
-
-Sub-task: {NN} — {sub-task name}
-Owned files: [list from sub-tasks.md — ONLY modify these files]
-
-Files to read:
-- {ST_PATH}/harness/exec-plans/active/{topic}/build-contract.md
-- {ST_PATH}/harness/exec-plans/active/{topic}/sub-tasks.md
-- {ST_PATH}/harness/product-specs/{topic-name}.md
-- {ST_PATH}/ARCHITECTURE.md
-- Applicable rule folders listed in build-contract.md
-
-Write your output to: {ST_PATH}/harness/exec-plans/active/{topic}/build-result-r{N}-{NN}.md
+TaskUpdate: T-subtasks → completed
 ```
 
-Wait for ALL Generator subagents to complete.
+### 5단계: 빌드 루프
 
-**Merge sub-tasks into main topic worktree:**
+최대 라운드 = min(plan-config eval_rounds, CLAUDE.md max_eval_rounds). 라운드 1부터 루프:
 
-For each sub-task branch in order:
-```bash
-git -C {WORKTREE_PATH} merge topic/{topic-code}-{NN} --no-ff \
-  -m "merge sub-task {NN} into topic/{topic-code}"
-```
+#### 라운드 N:
 
-Clean up sub-task worktrees:
-```bash
-git worktree remove {PROJECT_ROOT}/.flowness-worktrees/{topic-code}-{NN}
-git branch -D topic/{topic-code}-{NN}
-```
-
-Aggregate all `build-result-r{N}-{NN}.md` files into `{WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-result-r{N}.md`.
-
----
-
-**If Round 1 AND Strategy is `single`, OR Round N > 1:**
-
-Spawn a single Generator on the main topic worktree:
+**5a. 라운드 작업 생성**
 
 ```
-Round: {N}
-Project root: {WORKTREE_PATH}
-Topic directory: {WORKTREE_PATH}/harness/exec-plans/active/{topic}/
-Product spec: {WORKTREE_PATH}/harness/product-specs/{topic-name}.md
-
-Files to read:
-- {WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-contract.md
-- {WORKTREE_PATH}/harness/product-specs/{topic-name}.md
-- {WORKTREE_PATH}/ARCHITECTURE.md
-- Applicable rule folders listed in build-contract.md (read RULE.md for each, detail files as needed)
-{If N > 1: - {WORKTREE_PATH}/harness/exec-plans/active/{topic}/code-review-r{N-1}.md}
-{If N > 1: - {WORKTREE_PATH}/harness/exec-plans/active/{topic}/eval-result-r{N-1}.md}
-
-Write your output to: {WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-result-r{N}.md
+TaskCreate: "R{N}: Generate code", owner="generator",
+            addBlockedBy=[T-subtasks](R1) or [T-eval-{N-1}|T-aggr-{N-1}](R2+) → T-gen-N
+TaskCreate: "R{N}: Rule review", owner="rule-reviewer", addBlockedBy=[T-gen-N] → T-rule-N
+TaskCreate: "R{N}: Quality review", owner="quality-reviewer", addBlockedBy=[T-gen-N] → T-qual-N
+TaskCreate: "R{N}: Security review", owner="security-reviewer", addBlockedBy=[T-gen-N] → T-sec-N
+TaskCreate: "R{N}: Performance review", owner="performance-reviewer", addBlockedBy=[T-gen-N] → T-perf-N
+TaskCreate: "R{N}: Architecture review", owner="architecture-reviewer", addBlockedBy=[T-gen-N] → T-arch-N
+TaskCreate: "R{N}: Aggregate reviews", addBlockedBy=[T-rule-N,T-qual-N,T-sec-N,T-perf-N,T-arch-N] → T-aggr-N
+TaskCreate: "R{N}: Evaluate", owner="evaluator", addBlockedBy=[T-aggr-N] → T-eval-N
 ```
 
-Wait for the Generator subagent to complete.
+**5b. 생성**
 
----
+병렬 전략이고 라운드 1인 경우:
+- 각 하위 작업 NN에 대해: `Skill: flowness:internal-worktree, args="create-subtask {topic-code} {NN}"`
 
-**5b. Verify build-result**
+호출: `Skill: flowness:internal-generate, args="round={N} worktree={WORKTREE_PATH} topic={topic-dir} spec={spec-file} strategy={strategy} sub-tasks={NN-list} task-id={T-gen-N}"`
 
-Read `{WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-result-r{N}.md` to confirm it was created.
+병렬 전략을 사용한 경우:
+- `Skill: flowness:internal-worktree, args="merge-subtasks {topic-code} {NN-list}"`
+- 각 NN에 대해: `Skill: flowness:internal-worktree, args="cleanup-subtask {topic-code} {NN}"`
 
-**5c. Spawn 5 Reviewer subagents in parallel**
+**5c. 리뷰**
 
-Spawn ALL 5 reviewers simultaneously using multiple Agent tool calls in a single message. Each reviewer focuses on a different perspective.
+호출: `Skill: flowness:internal-review, args="round={N} worktree={WORKTREE_PATH} topic={topic-dir} task-ids={T-rule-N},{T-qual-N},{T-sec-N},{T-perf-N},{T-arch-N},{T-aggr-N}"`
 
-**Reviewer 1: RuleReviewer**
+**5d. 리뷰 결과 확인**
 
-Use the Agent tool with `subagent_type: flowness:rule-reviewer` and pass this prompt:
+`code-review-r{N}.md`를 읽습니다:
+- **FAIL** → `TaskUpdate: T-eval-N → deleted`, 다음 라운드 (5a로 이동)
+- **PASS** → 계속 진행
 
-```
-Round: {N}
-Project root: {WORKTREE_PATH}
-Topic directory: {WORKTREE_PATH}/harness/exec-plans/active/{topic}/
+**5e. 평가**
 
-Files to read:
-- {WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-contract.md (Applicable Rules list)
-- {WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-result-r{N}.md (changed files list)
-- Rule detail files from Applicable Rules folders
+호출: `Skill: flowness:internal-evaluate, args="round={N} worktree={WORKTREE_PATH} topic={topic-dir} eval-tool={eval_tool} task-id={T-eval-N}"`
 
-Return your findings as structured text. Do NOT create a file.
-```
+**5f. 평가 결과 확인**
 
-**Reviewer 2: QualityReviewer**
+`eval-result-r{N}.md`를 읽습니다:
+- **PASS** → 6단계
+- **FAIL** + 남은 라운드 있음 → 라운드 증가, 5a로 이동
+- **FAIL** + 남은 라운드 없음 → 7단계
 
-Use the Agent tool with `subagent_type: flowness:quality-reviewer` and pass this prompt:
-
-```
-Round: {N}
-Project root: {WORKTREE_PATH}
-Topic directory: {WORKTREE_PATH}/harness/exec-plans/active/{topic}/
-
-Files to read:
-- {WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-result-r{N}.md (changed files list)
-- {WORKTREE_PATH}/ARCHITECTURE.md
-
-Return your findings as structured text. Do NOT create a file.
-```
-
-**Reviewer 3: SecurityReviewer**
-
-Use the Agent tool with `subagent_type: flowness:security-reviewer` and pass this prompt:
+### 6단계: 성공
 
 ```
-Round: {N}
-Project root: {WORKTREE_PATH}
-Topic directory: {WORKTREE_PATH}/harness/exec-plans/active/{topic}/
-
-Files to read:
-- {WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-result-r{N}.md (changed files list)
-- {WORKTREE_PATH}/ARCHITECTURE.md
-
-Return your findings as structured text. Do NOT create a file.
+TaskCreate: "Finalize topic", activeForm="Finalizing topic" → T-final
+TaskUpdate: T-final → in_progress
 ```
 
-**Reviewer 4: PerformanceReviewer**
-
-Use the Agent tool with `subagent_type: flowness:performance-reviewer` and pass this prompt:
-
-```
-Round: {N}
-Project root: {WORKTREE_PATH}
-Topic directory: {WORKTREE_PATH}/harness/exec-plans/active/{topic}/
-
-Files to read:
-- {WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-result-r{N}.md (changed files list)
-- {WORKTREE_PATH}/ARCHITECTURE.md
-
-Return your findings as structured text. Do NOT create a file.
-```
-
-**Reviewer 5: ArchitectureReviewer**
-
-Use the Agent tool with `subagent_type: flowness:architecture-reviewer` and pass this prompt:
+1. 토픽을 `active/`에서 `completed/`로 이동합니다
+2. CLAUDE.md를 업데이트합니다: 토픽을 완료 토픽으로 이동
+3. eval-result 요약을 출력합니다
 
 ```
-Round: {N}
-Project root: {WORKTREE_PATH}
-Topic directory: {WORKTREE_PATH}/harness/exec-plans/active/{topic}/
-
-Files to read:
-- {WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-result-r{N}.md (changed files list)
-- {WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-contract.md
-- {WORKTREE_PATH}/ARCHITECTURE.md
-
-Return your findings as structured text. Do NOT create a file.
+TaskUpdate: T-final → completed
 ```
 
-Wait for ALL 5 reviewer subagents to complete.
-
-**5d. Aggregate review results**
-
-Collect the outputs from all 5 reviewers and create `{WORKTREE_PATH}/harness/exec-plans/active/{topic}/code-review-r{N}.md`:
-
-```markdown
-# Code Review
-
-## Round: {N}
-## Status: PASS | FAIL
-
-## Rule Violations
-{RuleReviewer output — or "No violations found."}
-
-## Quality Issues
-{QualityReviewer output — or "No issues found."}
-
-## Security Issues
-{SecurityReviewer output — or "No issues found."}
-
-## Performance Issues
-{PerformanceReviewer output — or "No issues found."}
-
-## Architecture Issues
-{ArchitectureReviewer output — or "No issues found."}
-
-## Summary
-- Total: {n} issues ({critical}C / {major}M / {minor}m)
-- Blocking: {list of critical + major issues}
-```
-
-Determine the overall Status:
-- Any **critical** or **major** issue from ANY reviewer → **FAIL**
-- Only **minor** issues (or no issues) → **PASS**
-
-**5e. Check code review result**
-
-Read `{WORKTREE_PATH}/harness/exec-plans/active/{topic}/code-review-r{N}.md`:
-- If Status is FAIL → skip Evaluator, go back to 5a (Generator fixes all reviewer findings first)
-- If Status is PASS → continue to Evaluator
-
-**5f. Spawn Evaluator subagent**
-
-Use the Agent tool with `subagent_type: flowness:evaluator` and pass this prompt:
+### 6a단계: 반성 (자동)
 
 ```
-Round: {N}
-Project root: {WORKTREE_PATH}
-Topic directory: {WORKTREE_PATH}/harness/exec-plans/active/{topic}/
-Eval tool: {eval_tool from CLAUDE.md config}
-
-Files to read:
-- {WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-contract.md
-- {WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-result-r{N}.md
-- Relevant eval-criteria/ files listed in build-contract.md
-{If N > 1: - {WORKTREE_PATH}/harness/exec-plans/active/{topic}/eval-result-r{N-1}.md}
-
-Write your output to: {WORKTREE_PATH}/harness/exec-plans/active/{topic}/eval-result-r{N}.md
+TaskCreate: "Reflect on topic learnings", activeForm="Reflecting on learnings" → T-reflect
+TaskUpdate: T-reflect → in_progress
 ```
 
-Wait for the Evaluator subagent to complete.
+호출: `Skill: flowness:internal-reflect, args="worktree={WORKTREE_PATH} topic={topic-dir} task-id={T-reflect}"`
 
-**5g. Check eval result**
+반성이 완료되면 결과 요약을 사용자에게 출력합니다.
 
-Read `{WORKTREE_PATH}/harness/exec-plans/active/{topic}/eval-result-r{N}.md`:
-- If Status is PASS → exit loop, go to Step 6
-- If Status is FAIL and rounds remaining → increment round number, continue loop
-- If Status is FAIL and no rounds remaining → go to Step 7 (escalation)
+```
+TaskUpdate: T-reflect → completed
+```
 
-### Step 6: Success
+4. 사용자에게 안내합니다: 워크트리 경로, 브랜치 이름, 정리 명령어
+5. `/maintain learn`을 제안하여 교차 토픽 학습을 실행합니다
 
-1. Move the topic directory from `{WORKTREE_PATH}/harness/exec-plans/active/{topic}/` to `{WORKTREE_PATH}/harness/exec-plans/completed/{topic}/`
-2. Update `{WORKTREE_PATH}/CLAUDE.md`: move the topic from Active Topics to Completed Topics
-3. Output the latest eval-result-r{N}.md summary to the user
-4. Inform the user:
-   - Worktree: `{WORKTREE_PATH}`
-   - Branch: `topic/{topic-code}` — ready for PR
-   - After merging: `git worktree remove {WORKTREE_PATH}` to clean up
-5. Suggest running `/maintain` to update quality scores and docs
+### 7단계: 에스컬레이션
 
-### Step 7: Escalation - Human intervention needed
+```
+TaskCreate: "Escalate: human review needed", activeForm="Preparing escalation report" → T-escalate
+TaskUpdate: T-escalate → in_progress
+```
 
-1. Output the latest eval-result-r{N}.md and code-review-r{N}.md to the user
-2. List the unresolved issues
-3. Inform the user the worktree is at `{WORKTREE_PATH}` for manual inspection
-4. Ask the user how to proceed:
-   - Fix specific issues manually and re-run `/work {topic-code}`
-   - Accept the current state as-is
-   - Abandon the topic (`git worktree remove {WORKTREE_PATH} && git branch -D topic/{topic-code}`)
+1. 최신 eval-result와 code-review를 출력합니다
+2. 미해결 이슈를 나열합니다
+3. 사용자에게 워크트리 위치를 안내합니다
+4. 진행 방법을 질문합니다: 수동 수정 후 재실행, 현재 상태로 수용, 또는 포기
 
-## Important Rules
+```
+TaskUpdate: T-escalate → completed
+```
 
-- NEVER write code yourself - always delegate to subagents
-- NEVER review or evaluate code yourself - always delegate
-- Each subagent gets a FRESH context (natural context reset)
-- Communication between agents is ONLY through files in the topic directory
-- No two agents share a context
-- Sub-task file ownership must be strictly disjoint — the orchestrator enforces this during Step 4
-- Round 1 parallel: spawn all Generators in a single message, wait, then merge
-- Round 2+ always uses a single Generator on the main worktree (no re-splitting)
-- Spawn ALL 5 reviewers in PARALLEL (single message, multiple Agent tool calls) — do NOT spawn them sequentially
-- Reviewers return results as text — YOU aggregate them into code-review-r{N}.md
-- Any reviewer finding a critical or major issue = FAIL → Generator must fix before Evaluator runs
-- Respect max_eval_rounds from CLAUDE.md as an absolute ceiling
-- Agent behavior is defined in agents/ files - pass only dynamic context (paths, round number) in the prompt
-- All file paths passed to subagents MUST be absolute paths under the relevant worktree path
+## 중요 규칙
+
+- **절대로** 코드를 직접 작성, 리뷰 또는 평가하지 마세요 — 내부 스킬을 통해 위임합니다
+- 각 파이프라인 단계는 별도의 내부 스킬 호출로 실행됩니다
+- 작업 ID를 전체적으로 추적합니다 — 상태 업데이트를 위해 내부 스킬에 전달합니다
+- 가시성을 위해 각 라운드 시작 시 모든 라운드 작업을 미리 생성합니다
+- 코드 리뷰가 FAIL이면 해당 라운드의 eval 작업을 삭제합니다
+- CLAUDE.md의 max_eval_rounds를 절대적 상한으로 준수합니다

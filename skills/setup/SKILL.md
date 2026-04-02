@@ -1,44 +1,45 @@
 ---
 name: setup
 description: Analyze project and scaffold the harness knowledge base. Run this first before any other flowness skill. Creates CLAUDE.md, ARCHITECTURE.md, and harness/ directory structure. Use when starting a new project or onboarding an existing codebase.
+description-ko: 프로젝트를 분석하고 harness 지식 베이스를 구축합니다. 다른 flowness 스킬보다 먼저 실행하세요. CLAUDE.md, ARCHITECTURE.md 및 harness/ 디렉토리 구조를 생성합니다. 새 프로젝트를 시작하거나 기존 코드베이스를 온보딩할 때 사용합니다.
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 argument-hint: "[project-description]"
 ---
 
-# Flowness Setup
+# Flowness 셋업
 
-You are the Setup agent for the Flowness harness engineering workflow.
+당신은 Flowness harness 엔지니어링 워크플로우의 셋업 에이전트입니다.
 
-## Your Role
+## 역할
 
-Analyze the current project and create the harness knowledge base structure. This is the foundation that all other Flowness skills depend on.
+현재 프로젝트를 분석하고 harness 지식 베이스 구조를 생성합니다. 이것은 다른 모든 Flowness 스킬이 의존하는 기반입니다.
 
-## Process
+## 프로세스
 
-### Step 1: Analyze Project State
+### 1단계: 프로젝트 상태 분석
 
-Determine which scenario applies:
+어떤 시나리오에 해당하는지 판단합니다:
 
-**Scenario A: Existing project with code**
-- Scan the codebase: tech stack, directory structure, patterns, dependencies
-- Identify domains, layers, and architectural patterns
-- Extract naming conventions and coding style
+**시나리오 A: 코드가 있는 기존 프로젝트**
+- 코드베이스를 스캔합니다: 기술 스택, 디렉토리 구조, 패턴, 의존성
+- 도메인, 레이어 및 아키텍처 패턴을 식별합니다
+- 네이밍 컨벤션과 코딩 스타일을 추출합니다
 
-**Scenario B: Blank project with known goal**
-- The user provided a project description via $ARGUMENTS
-- Use that to inform initial CLAUDE.md and eval-criteria
+**시나리오 B: 목표가 있는 빈 프로젝트**
+- 사용자가 $ARGUMENTS를 통해 프로젝트 설명을 제공했습니다
+- 이를 사용하여 초기 CLAUDE.md와 eval-criteria를 구성합니다
 
-**Scenario C: Blank project with no goal**
-- Create the harness structure with minimal defaults
-- Content will be filled in when /plan is run
+**시나리오 C: 목표가 없는 빈 프로젝트**
+- 최소 기본값으로 harness 구조를 생성합니다
+- /plan 실행 시 내용이 채워집니다
 
-### Step 2: Create CLAUDE.md (project root)
+### 2단계: CLAUDE.md 생성 (프로젝트 루트)
 
-Create `CLAUDE.md` at the project root. This is the **map** - not an encyclopedia.
-Keep it under 100 lines. It should point to deeper documents in harness/.
+프로젝트 루트에 `CLAUDE.md`를 생성합니다. 이것은 **지도**이지 백과사전이 아닙니다.
+100줄 이하로 유지하세요. harness/ 내의 상세 문서를 가리켜야 합니다.
 
-Use the template structure:
+다음 템플릿 구조를 사용합니다:
 
 ```markdown
 # Project Name
@@ -70,13 +71,13 @@ eval_tool: playwright    # playwright | chrome-devtools
 - [SECURITY.md](harness/SECURITY.md) — Security guidelines
 ```
 
-For Scenario A (existing project), populate with actual findings from the analysis.
-For Scenario B/C, use placeholder descriptions.
+시나리오 A(기존 프로젝트)의 경우, 분석에서 발견한 실제 내용으로 채웁니다.
+시나리오 B/C의 경우, 플레이스홀더 설명을 사용합니다.
 
-### Step 3: Create ARCHITECTURE.md (project root)
+### 3단계: ARCHITECTURE.md 생성 (프로젝트 루트)
 
-For Scenario A: Document the actual domain/layer structure found in the codebase.
-For Scenario B/C: Create a minimal template that /plan will fill in later.
+시나리오 A의 경우: 코드베이스에서 발견한 실제 도메인/레이어 구조를 문서화합니다.
+시나리오 B/C의 경우: /plan이 나중에 채울 최소 템플릿을 생성합니다.
 
 ```markdown
 # Architecture
@@ -91,9 +92,9 @@ For Scenario B/C: Create a minimal template that /plan will fill in later.
 [Which layers can depend on which]
 ```
 
-### Step 4: Scaffold harness/ directory
+### 4단계: harness/ 디렉토리 스캐폴딩
 
-Create the following structure with initial files:
+다음 구조와 초기 파일을 생성합니다:
 
 ```
 harness/
@@ -110,15 +111,29 @@ harness/
 │   └── code-quality.md       # Code quality standards
 ├── rules/                    # Empty, populated by /rule
 ├── references/               # Empty, user adds external refs
+├── learning-log.md           # Learning history (append-only)
+├── learning-history/         # Archived improvement proposals
 ├── DESIGN.md                 # Design principles
 ├── QUALITY_SCORE.md          # Quality grades
 ├── RELIABILITY.md            # Reliability requirements
 └── SECURITY.md               # Security guidelines
 ```
 
-### Step 5: Initialize core-beliefs
+### 4a단계: 학습 인프라 초기화
 
-Create `harness/design-docs/core-beliefs.md` with foundational principles:
+`harness/learning-log.md`를 생성합니다:
+
+```markdown
+# 학습 로그
+
+자기 학습 시스템의 추가 전용 기록입니다. /work 완료 후 자동으로 업데이트됩니다.
+```
+
+`harness/learning-history/` 디렉토리를 생성합니다 (빈 디렉토리).
+
+### 5단계: core-beliefs 초기화
+
+다음의 기본 원칙으로 `harness/design-docs/core-beliefs.md`를 생성합니다:
 
 ```markdown
 # Core Beliefs
@@ -143,45 +158,45 @@ Technical debt is a high-interest loan — pay it off incrementally rather than 
 Once a human taste preference is captured, apply it consistently across all code.
 ```
 
-### Step 6: Update .gitignore
+### 6단계: .gitignore 업데이트
 
-Add `.flowness-worktrees/` to the project's `.gitignore` (create the file if it doesn't exist):
+프로젝트의 `.gitignore`에 `.flowness-worktrees/`를 추가합니다 (파일이 없으면 생성합니다):
 
 ```
 # Flowness worktrees
 .flowness-worktrees/
 ```
 
-### Step 7: Initialize rules directory
+### 7단계: rules 디렉토리 초기화
 
-The `harness/rules/` directory starts empty. Use `/rule` to add project-specific rules (conv-, pattern-, lib-). TDD is handled by the internal `flowness:tdd` skill, not as a rule.
+`harness/rules/` 디렉토리는 비어있는 상태로 시작합니다. `/rule`을 사용하여 프로젝트별 규칙(conv-, pattern-, lib-)을 추가하세요. TDD는 내부 `flowness:tdd` 스킬이 처리하며, 규칙으로 관리하지 않습니다.
 
-Do NOT copy RULES-GUIDE.md here — agents read it from `templates/rules/RULES-GUIDE.md` directly.
+여기에 RULES-GUIDE.md를 복사하지 마세요 — 에이전트는 `templates/rules/RULES-GUIDE.md`에서 직접 읽습니다.
 
-### Step 8: Initialize eval-criteria defaults
+### 8단계: eval-criteria 기본값 초기화
 
-Create two default evaluation criteria files that apply to any project:
+모든 프로젝트에 적용되는 두 개의 기본 평가 기준 파일을 생성합니다:
 
 **functionality.md:**
-- Does the feature work as specified?
-- Are edge cases handled?
-- Does it integrate correctly with existing functionality?
+- 기능이 명세대로 동작하는가?
+- 엣지 케이스가 처리되었는가?
+- 기존 기능과 올바르게 통합되는가?
 
 **code-quality.md:**
-- Does the code follow project conventions?
-- Is test coverage adequate?
-- Are there no obvious bugs or anti-patterns?
+- 코드가 프로젝트 컨벤션을 따르는가?
+- 테스트 커버리지가 적절한가?
+- 명백한 버그나 안티패턴이 없는가?
 
-### Step 9: Summary
+### 9단계: 요약
 
-After creating all files, output a summary:
-- What scenario was detected (A/B/C)
-- What files were created
-- Recommended next step (run /plan)
+모든 파일을 생성한 후 요약을 출력합니다:
+- 감지된 시나리오 (A/B/C)
+- 생성된 파일 목록
+- 권장 다음 단계 (/plan 실행)
 
-## Important Rules
+## 중요 규칙
 
-- NEVER create an overwhelming CLAUDE.md. Keep it as a map (~100 lines max)
-- For existing projects, analyze BEFORE creating - don't assume
-- eval-criteria/ files should be concise and actionable, not exhaustive
-- Every file should be useful to an agent - if an agent can't act on it, don't create it
+- 절대로 방대한 CLAUDE.md를 만들지 마세요. 지도 수준으로 유지합니다 (~100줄 이하)
+- 기존 프로젝트의 경우, 생성하기 전에 먼저 분석하세요 — 가정하지 마세요
+- eval-criteria/ 파일은 간결하고 실행 가능해야 하며, 모든 것을 나열하지 마세요
+- 모든 파일은 에이전트에게 유용해야 합니다 — 에이전트가 활용할 수 없다면 만들지 마세요

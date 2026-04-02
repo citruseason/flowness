@@ -5,17 +5,17 @@ impactDescription: Consistent test structure improves readability and debugging
 tags: tdd, testing, structure, naming
 ---
 
-## Test Structure
+## 테스트 구조
 
-**Impact: HIGH (Consistent test structure improves readability and debugging)**
+**영향도: 높음 (일관된 테스트 구조는 가독성과 디버깅을 향상시킵니다)**
 
-Tests follow the Arrange-Act-Assert (AAA) pattern with descriptive naming.
+테스트는 서술적인 이름과 함께 Arrange-Act-Assert (AAA) 패턴을 따릅니다.
 
-### Naming Convention
+### 명명 규칙
 
-Test names should describe the behavior, not the implementation.
+테스트 이름은 구현이 아닌 동작을 설명해야 합니다.
 
-**Incorrect (implementation-focused naming):**
+**잘못된 예 (구현 중심 명명):**
 
 ```typescript
 test('calls fetchRates and returns data', () => { ... });
@@ -23,7 +23,7 @@ test('TripService.create test', () => { ... });
 test('test1', () => { ... });
 ```
 
-**Correct (behavior-focused naming):**
+**올바른 예 (동작 중심 명명):**
 
 ```typescript
 test('converts 100 USD to EUR using current exchange rate', () => { ... });
@@ -31,11 +31,11 @@ test('creates a trip with valid name and date range', () => { ... });
 test('shows error message when API is unavailable', () => { ... });
 ```
 
-### AAA Pattern
+### AAA 패턴
 
-Each test has three distinct sections.
+각 테스트는 세 가지 명확한 섹션으로 구성됩니다.
 
-**Incorrect (mixed concerns):**
+**잘못된 예 (관심사 혼합):**
 
 ```typescript
 test('converts currency', () => {
@@ -48,7 +48,7 @@ test('converts currency', () => {
 });
 ```
 
-**Correct (clear AAA separation):**
+**올바른 예 (명확한 AAA 분리):**
 
 ```typescript
 test('converts 100 USD to EUR at 0.85 rate', () => {
@@ -74,11 +74,11 @@ test('converts zero amount to zero', () => {
 });
 ```
 
-### Test Organization
+### 테스트 구성
 
-Group related tests using `describe` blocks that mirror the feature or module being tested.
+관련된 테스트를 테스트 대상 기능이나 모듈을 반영하는 `describe` 블록으로 그룹화합니다.
 
-**Incorrect (flat, unorganized):**
+**잘못된 예 (평면적, 비구조적):**
 
 ```typescript
 test('create trip', () => { ... });
@@ -87,7 +87,7 @@ test('create trip fails without name', () => { ... });
 test('list trips', () => { ... });
 ```
 
-**Correct (grouped by feature):**
+**올바른 예 (기능별 그룹화):**
 
 ```typescript
 describe('Trip Management', () => {
