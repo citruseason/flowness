@@ -26,16 +26,10 @@ Verify CLAUDE.md exists at the project root. If not, tell the user to run `/setu
 
 ### Step 1: Create feature branch
 
-Get the git username and create a branch:
+- If already on a branch named `topic/{topic-code}`, continue on that branch
+- Otherwise create and checkout: `git checkout -b topic/{topic-code}`
 
-```bash
-GIT_USER=$(git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
-```
-
-- If already on a branch named `work/{git-username}/{topic-code}`, continue on that branch
-- Otherwise create and checkout: `git checkout -b work/{git-username}/{topic-code}`
-
-This ensures each developer's work is isolated on its own branch.
+This ensures all generated code is isolated from the main branch.
 
 ### Step 2: Load context
 
@@ -267,7 +261,7 @@ Read `harness/exec-plans/active/{topic}/eval-result-r{N}.md`:
 1. Move the topic directory from `harness/exec-plans/active/{topic}/` to `harness/exec-plans/completed/{topic}/`
 2. Update CLAUDE.md: move the topic from Active Topics to a Completed Topics section (or remove it)
 3. Output the latest eval-result-r{N}.md summary to the user
-4. Inform the user the build is complete and the branch `work/{git-username}/{topic-code}` is ready for review
+4. Inform the user the build is complete and the branch `topic/{topic-code}` is ready for review
 5. Suggest running `/maintain` to update quality scores and docs
 
 ### Step 6: Escalation - Human intervention needed
