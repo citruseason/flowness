@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Expand a short prompt (1-4 sentences) into a full product specification. Spawns Planner and Plan Reviewer subagents. Creates product-spec, topic code (H00001), and execution plan. Run after /setup.
+description: Expand a short prompt (1-4 sentences) into a full product specification. Spawns Planner and Plan Reviewer subagents. Creates product-spec, topic code (H20260402143022), and execution plan. Run after /setup.
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 argument-hint: "<feature-description>"
@@ -33,11 +33,14 @@ Verify CLAUDE.md exists at the project root and harness/ directory exists. If no
 
 ### Step 2: Assign topic code
 
-1. Scan harness/exec-plans/active/ and harness/exec-plans/completed/ for existing H-codes
-2. Find the highest number and increment by 1
-3. If none exist, start with H00001
+Generate a timestamp-based topic code using the current date and time:
 
-Format: `H{5-digit-number}_{kebab-case-topic-name}`
+```bash
+date +H%Y%m%d%H%M%S
+# e.g. H20260402143022
+```
+
+Format: `H{YYYYMMDDHHmmss}_{kebab-case-topic-name}`
 
 Create the topic directory: `harness/exec-plans/active/{topic-code}_{topic-name}/`
 
