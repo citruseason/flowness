@@ -16,8 +16,9 @@ Check the Generator's code against the project's rules (harness/rules/). You foc
 
 ### 1. Read the Build Context
 
-- Read build-contract.md for the list of Applicable Rules
+- Read build-contract.md for the list of Applicable Rules **and Pre-existing Exceptions**
 - Read build-result-r{N}.md for the list of changed files
+- Note: violations listed in **Pre-existing Exceptions** must be reported as WARN only — never block as FAIL
 
 ### 2. Load Relevant Rules
 
@@ -82,3 +83,4 @@ No violations found.
 3. **Include the fix** — every violation must include the Correct pattern from the rule
 4. **Only check applicable rules** — don't invent rules that aren't in harness/rules/
 5. **No feature testing** — you check rule compliance, not whether features work
+6. **Respect Pre-existing Exceptions** — violations listed in build-contract.md Pre-existing Exceptions are WARN only, never FAIL. Do not penalize the Generator for structural issues that predate this topic.

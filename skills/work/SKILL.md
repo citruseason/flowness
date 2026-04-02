@@ -79,6 +79,11 @@ Create `{WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-contract.md`:
 - eval-criteria/functionality.md
 - eval-criteria/code-quality.md
 [any additional relevant criteria]
+
+## Pre-existing Exceptions
+[Known violations that exist BEFORE this topic and are OUT OF SCOPE to fix here.
+Reviewers must treat these as WARN only — never FAIL.]
+- [file/pattern]: [reason it's excluded]
 ```
 
 ### Step 4: Sub-task planning
