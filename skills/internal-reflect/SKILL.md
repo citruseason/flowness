@@ -97,6 +97,7 @@ Write your output to: {worktree}/harness/exec-plans/completed/{topic}/reflection
 
 ## 규칙
 
+- **자동 진행**: 모든 단계를 중단 없이 실행합니다. 사용자에게 텍스트를 출력하지 말고, Reflector 생성 → 대기 → 학습 로그 업데이트를 즉시 수행하세요
 - harness 파일을 직접 수정하지 마세요 — `reflection.md`와 `learning-log.md` 추가만 합니다
 - `learning-log.md`가 존재하지 않으면 빈 파일을 생성합니다
 - 에이전트 동작은 `agents/reflector.md`에 정의되어 있습니다 — 동적 컨텍스트만 전달합니다

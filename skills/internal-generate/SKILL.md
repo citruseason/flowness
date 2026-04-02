@@ -98,6 +98,7 @@ Write your output to: {ST_PATH}/harness/exec-plans/active/{topic}/build-result-r
 
 ## 규칙
 
+- **자동 진행**: 모든 단계를 중단 없이 실행합니다. 사용자에게 텍스트를 출력하지 말고, 에이전트 생성 → 대기 → 검증을 즉시 수행하세요
 - Generator 에이전트에 전달하는 모든 파일 경로는 해당 worktree 하위의 절대 경로여야 합니다
 - 병렬 전략의 경우: 각 Generator는 담당 파일 목록에 있는 파일만 수정합니다
 - 재시도 라운드(round > 1)의 경우: 이전 code-review와 eval-result를 반드시 읽을 파일에 포함합니다

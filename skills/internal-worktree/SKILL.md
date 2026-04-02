@@ -81,6 +81,7 @@ git worktree remove ${PROJECT_ROOT}/.flowness-worktrees/{topic-code}
 
 ## 규칙
 
+- **자동 진행**: 요청된 작업을 즉시 수행하고 결과를 출력합니다. 사용자에게 설명 텍스트를 출력하지 마세요
 - 모든 worktree 경로는 `{PROJECT_ROOT}/.flowness-worktrees/` 아래에 위치합니다
 - 브랜치 명명 규칙: 메인은 `topic/{topic-code}`, 하위 작업은 `topic/{topic-code}-{NN}`
 - 출력에는 항상 절대 경로를 사용합니다

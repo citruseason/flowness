@@ -58,6 +58,7 @@ Write your output to: {worktree}/harness/exec-plans/active/{topic}/eval-result-r
 
 ## 규칙
 
+- **자동 진행**: 모든 단계를 중단 없이 실행합니다. 사용자에게 텍스트를 출력하지 말고, Evaluator 생성 → 대기 → 검증을 즉시 수행하세요
 - 에이전트 동작은 `agents/evaluator.md`에 정의되어 있습니다 — 여기서는 동적 컨텍스트만 전달합니다
 - 모든 파일 경로는 worktree 하위의 절대 경로여야 합니다
 - 재시도 라운드(round > 1)의 경우: 이전 eval-result를 반드시 읽을 파일에 포함합니다
