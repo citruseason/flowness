@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Expand a short prompt (1-4 sentences) into a full product specification. Spawns Planner and Plan Reviewer subagents. Creates product-spec, topic code (H20260402143022), and execution plan. Run after /setup.
+description: Collaboratively brainstorm and expand a short prompt into a full product specification. Asks clarifying questions to fill gaps, then spawns Planner and Plan Reviewer subagents. Creates product-spec, topic code, and execution plan. Run after /setup.
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 argument-hint: "<feature-description>"
@@ -24,14 +24,68 @@ The user describes what they want to build: $ARGUMENTS
 
 Verify CLAUDE.md exists at the project root and harness/ directory exists. If not, tell the user to run `/setup` first.
 
-### Step 1: Read existing context
+### Step 1: Brainstorming
+
+Before spawning any subagent, collaboratively clarify the user's intent.
+
+**1a. Analyze the prompt**
+
+Evaluate $ARGUMENTS across these 6 dimensions. For each dimension, mark it as **clear** or **unclear**:
+
+| Dimension | Question to resolve |
+|-----------|-------------------|
+| Problem | What exact problem does this solve? |
+| Users | Who will use this, and in what context? |
+| Scope | What's explicitly in and out of scope? |
+| Constraints | Technical, time, or resource limits? |
+| Success criteria | How do we know it's done? |
+| Integration | How does it fit with existing features? |
+
+If 4 or more dimensions are already clear from the prompt, skip to Step 2.
+
+**1b. Ask targeted questions**
+
+For each **unclear** dimension, formulate a focused question with 2–4 representative options. Use `AskUserQuestion` with up to 4 questions per round.
+
+Guidelines for good questions:
+- Ask only about genuinely unclear dimensions — do NOT ask what the prompt already answers
+- Options should cover the most likely answers; "Other" is always available
+- Phrase questions concisely; avoid jargon
+
+**1c. Evaluate and repeat if needed**
+
+After receiving answers, re-evaluate remaining unclear dimensions. If critical gaps still exist, ask a second round (max 2 rounds total). Once context is sufficient, proceed.
+
+**1d. Compile enriched context**
+
+Summarize everything into an **Enriched Context** block to pass to the Planner:
+
+```
+## Enriched Context
+
+### Original prompt
+{$ARGUMENTS}
+
+### Clarified dimensions
+- Problem: {answer}
+- Users: {answer}
+- Scope: {in scope: ... / out of scope: ...}
+- Constraints: {answer}
+- Success criteria: {answer}
+- Integration: {answer}
+
+### Key decisions from brainstorming
+- {any notable decision or trade-off surfaced during discussion}
+```
+
+### Step 2: Read existing context
 
 1. Read CLAUDE.md for project config
 2. Read ARCHITECTURE.md for current structure
 3. Scan harness/product-specs/ for existing specs (avoid duplication)
 4. Check harness/exec-plans/active/ for in-progress work
 
-### Step 2: Assign topic code
+### Step 3: Assign topic code
 
 Generate a timestamp-based topic code using the current date and time:
 
@@ -44,21 +98,22 @@ Format: `H{YYYYMMDDHHmmss}_{kebab-case-topic-name}`
 
 Create the topic directory: `harness/exec-plans/active/{topic-code}_{topic-name}/`
 
-### Step 3: Planner-Reviewer Loop
+### Step 4: Planner-Reviewer Loop
 
 Repeat until Plan Reviewer passes all 8 criteria, up to max_plan_rounds from CLAUDE.md (default: 5).
 
 #### Round N:
 
-**3a. Spawn Planner subagent**
+**4a. Spawn Planner subagent**
 
 Use the Agent tool with `subagent_type: flowness:planner` and pass this prompt:
 
 ```
 Round: {N}
-User prompt: {$ARGUMENTS}
 Topic directory: harness/exec-plans/active/{topic}/
 Project root: {project root path}
+
+{Enriched Context from Step 1}
 
 Files to read:
 - CLAUDE.md
@@ -71,11 +126,11 @@ Write the product spec to: harness/product-specs/{topic-name}.md
 
 Wait for the Planner subagent to complete.
 
-**3b. Verify product-spec**
+**4b. Verify product-spec**
 
 Read `harness/product-specs/{topic-name}.md` to confirm it was created.
 
-**3c. Spawn Plan Reviewer subagent**
+**4c. Spawn Plan Reviewer subagent**
 
 Use the Agent tool with `subagent_type: flowness:plan-reviewer` and pass this prompt:
 
@@ -95,14 +150,14 @@ Write your review to: harness/exec-plans/active/{topic}/plan-review-result.md
 
 Wait for the Plan Reviewer subagent to complete.
 
-**3d. Check result**
+**4d. Check result**
 
 Read `harness/exec-plans/active/{topic}/plan-review-result.md`:
-- If Status is PASS → exit loop, go to Step 4
+- If Status is PASS → exit loop, go to Step 5
 - If Status is FAIL and rounds < max_plan_rounds → continue loop (Planner revises based on feedback)
-- If Status is FAIL and rounds >= max_plan_rounds → go to Step 5 (escalate to user)
+- If Status is FAIL and rounds >= max_plan_rounds → go to Step 6 (escalate to user)
 
-### Step 4: Create plan-config and finalize
+### Step 5: Create plan-config and finalize
 
 Assess the complexity of the task based on the validated product spec.
 
@@ -151,7 +206,7 @@ Output summary:
 - Complexity assessment
 - Next step: run `/work {topic-code}`
 
-### Step 5: Review failed after max rounds
+### Step 6: Review failed after max rounds
 
 Output the latest plan-review-result.md to the user with the unresolved issues. Ask:
 - Address specific reviewer concerns and re-run `/plan`
