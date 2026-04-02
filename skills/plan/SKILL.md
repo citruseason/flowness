@@ -52,9 +52,11 @@ Guidelines for good questions:
 - Options should cover the most likely answers; "Other" is always available
 - Phrase questions concisely; avoid jargon
 
-**1c. Evaluate and repeat if needed**
+**1c. Evaluate and repeat until sufficient**
 
-After receiving answers, re-evaluate remaining unclear dimensions. If critical gaps still exist, ask a second round (max 2 rounds total). Once context is sufficient, proceed.
+After each round of answers, re-evaluate all 6 dimensions. Continue asking questions until **all critical dimensions are clear enough to write a solid spec**. There is no round limit — keep going as long as meaningful gaps remain.
+
+Stop when you can confidently answer: *"Does a developer have everything needed to implement this without guessing?"*
 
 **1d. Compile enriched context**
 
