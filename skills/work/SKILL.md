@@ -69,8 +69,9 @@ Review fix tasks (created on review FAIL, up to 3 iterations per round):
   T-fix-N-F   R{N}.{F}: Fix review issues        [blockedBy: T-aggr-N or T-rerev-N-{F-1}]
   T-rerev-N-F R{N}.{F}: Re-review                [blockedBy: T-fix-N-F]
 
-Completion task:
+Completion tasks:
   T-final     Finalize topic                     [blockedBy: last T-eval]
+  T-publish   Commit, push, and create PR        [blockedBy: T-final]
 ```
 
 ## 입력
@@ -269,6 +270,53 @@ TaskUpdate: T-final → in_progress
 
 ```
 TaskUpdate: T-final → completed
+```
+
+### 6b단계: 커밋, 푸시, PR 생성
+
+```
+TaskCreate: "Commit, push, and create PR", activeForm="Publishing work" → T-publish
+TaskUpdate: T-publish → in_progress
+```
+
+1. **현재 브랜치 확인**: `git -C {WORKTREE_PATH} branch --show-current`
+
+2. **모든 변경사항 커밋**:
+   - `git -C {WORKTREE_PATH} add -A`
+   - 스테이징된 변경사항이 없으면 건너뜁니다 (Generator가 이미 커밋한 경우)
+   - 변경사항이 있으면:
+     ```
+     git -C {WORKTREE_PATH} commit -m "feat: {topic-name}
+
+     Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+     ```
+
+3. **푸시**: `git -C {WORKTREE_PATH} push -u origin {branch}`
+
+4. **PR 확인 및 생성**:
+   - `gh -C {WORKTREE_PATH} pr list --head {branch} --json number` 로 기존 PR 확인
+   - PR이 이미 존재하면 → PR URL을 출력하고 건너뜁니다
+   - PR이 없으면 → build-contract.md의 Scope를 기반으로 PR을 생성합니다:
+     ```
+     gh -C {WORKTREE_PATH} pr create \
+       --title "{topic-name}" \
+       --body "$(cat <<'EOF'
+     ## Summary
+     {build-contract.md의 Scope 내용을 bullet point로 요약}
+
+     ## Eval Result
+     - Round: {N}
+     - Status: PASS
+
+     🤖 Generated with [Claude Code](https://claude.ai/claude-code)
+     EOF
+     )"
+     ```
+
+5. PR URL을 사용자에게 출력합니다
+
+```
+TaskUpdate: T-publish → completed
 ```
 
 ### 6a단계: 반성 (자동)
