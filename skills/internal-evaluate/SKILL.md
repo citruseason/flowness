@@ -50,6 +50,8 @@ Write your output to: {worktree}/harness/exec-plans/active/{topic}/eval-result-r
 
 ### 검증
 
+`{worktree}/harness/exec-plans/active/{topic}/evaluation.json`을 읽고 `dev_server.started`와 `browser_sessions`이 채워졌는지 확인합니다 (웹 앱의 경우 비어있으면 평가가 제대로 수행되지 않은 것입니다).
+
 `{worktree}/harness/exec-plans/active/{topic}/eval-result-r{round}.md`를 읽고 상태를 추출합니다.
 
 `task-id`가 제공된 경우: `TaskUpdate: task-id → completed`
