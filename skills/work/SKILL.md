@@ -17,7 +17,7 @@ argument-hint: "<topic-code>"
 
 ## 자동 진행 규칙
 
-**모든 단계를 중단 없이 자동으로 실행합니다.**
+**모든 단계를 중단 없이 자동으로 실행합니다. 어떤 단계에서도 멈추지 마세요.**
 
 - 단계 사이에 사용자의 확인이나 입력을 **절대** 기다리지 마세요
 - 각 단계 완료 후 즉시 다음 단계로 진행하세요
@@ -25,6 +25,10 @@ argument-hint: "<topic-code>"
 - 사용자에게 텍스트를 출력하는 시점은 **오직**: 최종 성공 보고(6단계), 에스컬레이션(7단계), 또는 복구 불가능한 오류 발생 시뿐입니다
 - 내부 스킬 호출 전후로 설명이나 요약을 출력하지 마세요
 - 한 단계의 Skill 호출이 결과를 반환하면 즉시 결과를 파싱하고 다음 단계의 Skill을 호출하세요
+
+**⚠️ 절대 금지 패턴**: Skill 호출 후 결과를 받고 **텍스트만 출력하고 멈추는 것**은 금지합니다. 반드시 다음 도구 호출(Read, Glob, Skill, TaskUpdate 등)을 즉시 실행하세요.
+
+**재개 시에도 동일**: 0단계에서 재개 지점을 결정한 후, 해당 단계부터 마지막 단계까지 모든 나머지 단계를 중단 없이 자동으로 실행합니다.
 
 ## 내부 스킬
 
@@ -72,6 +76,7 @@ Review fix tasks (created on review FAIL, up to 3 iterations per round):
 Completion tasks:
   T-final     Finalize topic                     [blockedBy: last T-eval]
   T-publish   Commit, push, and create PR        [blockedBy: T-final]
+  T-reflect   Reflect on topic learnings          [blockedBy: T-publish]
 ```
 
 ## 입력
@@ -80,9 +85,41 @@ Completion tasks:
 
 ## 프로세스
 
-### 0단계: 전제 조건 확인
+### 0단계: 전제 조건 확인 및 재개 감지
 
 프로젝트 루트에 CLAUDE.md가 존재하는지 확인합니다. 없으면 사용자에게 `/setup`을 먼저 실행하라고 안내합니다.
+
+**재개 감지**: 이전 실행에서 중단된 경우를 감지하여 이어서 진행합니다.
+
+1. 프로젝트 루트를 확인합니다: `git rev-parse --show-toplevel` → PROJECT_ROOT
+2. WORKTREE_PATH를 계산합니다: `{PROJECT_ROOT}/.flowness-worktrees/{topic-code}`
+3. WORKTREE_PATH 디렉토리가 이미 존재하는지 확인합니다
+4. 존재하면 → **재개 모드**로 진입합니다:
+   a. `TaskList`로 기존 작업 목록을 확인합니다
+   b. 토픽 디렉토리를 찾습니다: `Glob: {WORKTREE_PATH}/harness/exec-plans/active/$ARGUMENTS_*/`
+   c. 다음 파일들의 존재 여부로 완료된 단계를 판단합니다:
+      - `build-contract.md` 존재 → 3단계 완료
+      - `sub-tasks.md` 존재 → 4단계 완료
+      - `build-result-r{N}.md` 존재 → 라운드 N 생성 완료
+      - `code-review-r{N}.md` 존재 → 라운드 N 리뷰 완료
+      - `eval-result-r{N}.md` 존재 → 라운드 N 평가 완료
+      - `completed/` 디렉토리에 토픽이 있음 → 6단계 완료
+      - `git -C {WORKTREE_PATH} log --oneline -1`로 브랜치에 커밋 존재 확인
+      - `gh pr list --head {branch}` 결과 있음 → 6a단계 완료
+      - `reflection.md` 존재 → 6b단계 완료
+   d. **재개 지점을 결정합니다**:
+      - 토픽 디렉토리 없음 → 2단계(컨텍스트 로드)부터 진행
+      - build-contract.md 없음 → 2단계(컨텍스트 로드)부터 진행
+      - sub-tasks.md 없음 → 4단계부터 진행
+      - 라운드 N의 build-result만 있음 → 5c(리뷰)부터 진행
+      - 라운드 N의 code-review만 있음 → 결과 확인(5d)부터 진행
+      - 라운드 N의 eval-result가 PASS이고 `completed/`에 토픽 없음 → 6단계부터 진행
+      - 라운드 N의 eval-result가 PASS이고 `completed/`에 토픽 있고 PR 없음 → 6a단계부터 진행
+      - PR 존재하고 reflection.md 없음 → 6b단계부터 진행
+      - 라운드 N의 eval-result가 FAIL → 라운드 N+1의 5a부터 진행
+   e. 기존 작업이 있으면 ID를 매핑하고, 없으면 완료된 단계의 작업을 `completed` 상태로 생성합니다
+   f. WORKTREE_PATH를 설정하고 해당 재개 지점의 단계로 **즉시 건너뜁니다**
+5. 존재하지 않으면 → **신규 실행**으로 1단계부터 시작합니다
 
 ### 1단계: 워크트리 설정
 
@@ -94,6 +131,8 @@ TaskUpdate: T-setup → in_progress
 호출: `Skill: flowness:internal-worktree, args="setup {topic-code}"`
 
 출력 `WORKTREE_PATH`를 캡처합니다. 이후 모든 경로는 이에 상대적입니다.
+
+**중요**: 이 Skill 호출이 결과를 반환하면, 반드시 즉시 2단계로 진행하세요. 여기서 멈추지 마세요.
 
 ### 2단계: 컨텍스트 로드
 
@@ -257,7 +296,7 @@ TaskCreate: "R{N}: Evaluate", owner="evaluator", addBlockedBy=[T-aggr-N] → T-e
 - **FAIL** + 남은 라운드 있음 → 라운드 증가, 5a로 이동
 - **FAIL** + 남은 라운드 없음 → 7단계
 
-### 6단계: 성공
+### 6단계: 성공 — Finalize
 
 ```
 TaskCreate: "Finalize topic", activeForm="Finalizing topic" → T-final
@@ -266,60 +305,83 @@ TaskUpdate: T-final → in_progress
 
 1. 토픽을 `active/`에서 `completed/`로 이동합니다
 2. CLAUDE.md를 업데이트합니다: 토픽을 완료 토픽으로 이동
-3. eval-result 요약을 출력합니다
 
 ```
 TaskUpdate: T-final → completed
 ```
 
-### 6b단계: 커밋, 푸시, PR 생성
+**중요**: T-final 완료 후 즉시 6a단계로 진행하세요. 여기서 멈추지 마세요.
+
+### 6a단계: 커밋, 푸시, PR 생성
 
 ```
 TaskCreate: "Commit, push, and create PR", activeForm="Publishing work" → T-publish
 TaskUpdate: T-publish → in_progress
 ```
 
-1. **현재 브랜치 확인**: `git -C {WORKTREE_PATH} branch --show-current`
+1. **현재 브랜치 확인**:
+   ```bash
+   git -C {WORKTREE_PATH} branch --show-current
+   ```
 
-2. **모든 변경사항 커밋**:
-   - `git -C {WORKTREE_PATH} add -A`
-   - 스테이징된 변경사항이 없으면 건너뜁니다 (Generator가 이미 커밋한 경우)
+2. **모든 변경사항 스테이징 및 커밋**:
+   ```bash
+   git -C {WORKTREE_PATH} add -A
+   ```
+   - `git -C {WORKTREE_PATH} diff --cached --quiet`로 스테이징된 변경사항 확인
+   - 변경사항이 없으면 → 커밋을 건너뜁니다 (Generator가 이미 커밋한 경우)
    - 변경사항이 있으면:
-     ```
-     git -C {WORKTREE_PATH} commit -m "feat: {topic-name}
+     ```bash
+     git -C {WORKTREE_PATH} commit -m "$(cat <<'EOF'
+     feat: {topic-name}
 
-     Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
-     ```
-
-3. **푸시**: `git -C {WORKTREE_PATH} push -u origin {branch}`
-
-4. **PR 확인 및 생성**:
-   - `gh -C {WORKTREE_PATH} pr list --head {branch} --json number` 로 기존 PR 확인
-   - PR이 이미 존재하면 → PR URL을 출력하고 건너뜁니다
-   - PR이 없으면 → build-contract.md의 Scope를 기반으로 PR을 생성합니다:
-     ```
-     gh -C {WORKTREE_PATH} pr create \
-       --title "{topic-name}" \
-       --body "$(cat <<'EOF'
-     ## Summary
-     {build-contract.md의 Scope 내용을 bullet point로 요약}
-
-     ## Eval Result
-     - Round: {N}
-     - Status: PASS
-
-     🤖 Generated with [Claude Code](https://claude.ai/claude-code)
+     Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
      EOF
      )"
      ```
 
-5. PR URL을 사용자에게 출력합니다
+3. **리모트로 푸시**:
+   ```bash
+   git -C {WORKTREE_PATH} push -u origin {branch}
+   ```
+   - 푸시 실패 시 오류를 출력하고 계속 진행합니다 (PR 생성은 건너뜀)
+
+4. **기존 PR 확인**:
+   ```bash
+   gh pr list --repo $(git -C {WORKTREE_PATH} remote get-url origin | sed 's/\.git$//') --head {branch} --json number,url
+   ```
+   - PR이 이미 존재하면 → URL을 기록하고 PR 생성을 건너뜁니다
+
+5. **PR 생성** (기존 PR이 없을 때만):
+   - build-contract.md에서 Scope 내용을 읽습니다
+   - eval-result에서 최종 라운드와 상태를 읽습니다
+   ```bash
+   gh pr create \
+     --repo $(git -C {WORKTREE_PATH} remote get-url origin | sed 's/\.git$//') \
+     --head {branch} \
+     --title "feat: {topic-name}" \
+     --body "$(cat <<'EOF'
+   ## Summary
+   {build-contract.md의 Scope 내용을 bullet point로 요약}
+
+   ## Eval Result
+   - Round: {N}
+   - Status: PASS
+
+   🤖 Generated with [Claude Code](https://claude.ai/claude-code)
+   EOF
+   )"
+   ```
+
+6. **결과 출력**: PR URL을 사용자에게 출력합니다 (생성된 PR 또는 기존 PR)
 
 ```
 TaskUpdate: T-publish → completed
 ```
 
-### 6a단계: 반성 (자동)
+**중요**: T-publish 완료 후 즉시 6b단계로 진행하세요. 여기서 멈추지 마세요.
+
+### 6b단계: 반성 (자동)
 
 ```
 TaskCreate: "Reflect on topic learnings", activeForm="Reflecting on learnings" → T-reflect
@@ -328,14 +390,15 @@ TaskUpdate: T-reflect → in_progress
 
 호출: `Skill: flowness:internal-reflect, args="worktree={WORKTREE_PATH} topic={topic-dir} task-id={T-reflect}"`
 
-반성이 완료되면 결과 요약을 사용자에게 출력합니다.
-
 ```
 TaskUpdate: T-reflect → completed
 ```
 
-4. 사용자에게 안내합니다: 워크트리 경로, 브랜치 이름, 정리 명령어
-5. `/maintain learn`을 제안하여 교차 토픽 학습을 실행합니다
+반성 완료 후 사용자에게 최종 보고:
+1. eval-result 요약
+2. PR URL
+3. 워크트리 경로, 브랜치 이름
+4. `/maintain learn`을 제안하여 교차 토픽 학습 실행 안내
 
 ### 7단계: 에스컬레이션
 
