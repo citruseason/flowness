@@ -16,6 +16,22 @@ claude plugins install flowness
 
 To verify, run `/setup` inside a Claude Code session — it should be recognized as a skill.
 
+### Required Plugin: superpowers
+
+`/plan`의 브레인스토밍 단계에서 [superpowers](https://github.com/obra/superpowers) 플러그인의 `brainstorming` 스킬을 사용합니다.
+
+```bash
+claude plugins install obra/superpowers
+```
+
+### Optional Plugin: Codex
+
+`/plan`의 리뷰 단계에서 Codex 기반 기술 타당성 리뷰를 추가로 수행할 수 있습니다. 없어도 동작하지만, 설치하면 Plan Reviewer와 병렬로 Codex 리뷰가 실행됩니다.
+
+```bash
+claude plugins install anthropic/codex
+```
+
 ## Updating
 
 ```bash
