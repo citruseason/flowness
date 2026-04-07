@@ -1,7 +1,7 @@
 ---
 name: work
-description: Execute the Build loop for a topic. Spawns Generator, multi-perspective Reviewers, and Evaluator subagents that communicate via files. Run after /plan. Use when ready to implement a planned feature.
-description-ko: 토픽에 대한 빌드 루프를 실행합니다. Generator, 다중 관점 Reviewer, Evaluator 서브에이전트를 생성하여 파일을 통해 소통합니다. /plan 이후에 실행합니다. 계획된 기능을 구현할 준비가 되었을 때 사용합니다.
+description: Execute the Build loop for a topic. Spawns Generator and multi-perspective Reviewer subagents that communicate via files. Run after /plan. Use when ready to implement a planned feature.
+description-ko: 토픽에 대한 빌드 루프를 실행합니다. Generator, 다중 관점 Reviewer 서브에이전트를 생성하여 파일을 통해 소통합니다. /plan 이후에 실행합니다. 계획된 기능을 구현할 준비가 되었을 때 사용합니다.
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Skill, TaskCreate, TaskUpdate, TaskList
 argument-hint: "<topic-code>"
@@ -37,7 +37,6 @@ argument-hint: "<topic-code>"
 | 워크트리 | `flowness:internal-worktree` | `setup`, `create-subtask`, `merge-subtasks`, `cleanup-subtask` |
 | 생성 | `flowness:internal-generate` | Generator를 생성하고 `build-result-r{N}.md`를 출력 |
 | 리뷰 | `flowness:internal-review` | 5개 Reviewer를 생성하고 `code-review-r{N}.md`를 출력 |
-| 평가 | `flowness:internal-evaluate` | Evaluator를 생성하고 `eval-result-r{N}.md`를 출력 |
 
 ## 작업 추적
 
@@ -60,21 +59,20 @@ Phase tasks (created once):
   T-subtasks  Plan sub-tasks                     [blockedBy: T-contract]
 
 Round tasks (created per round):
-  T-gen-N     R{N}: Generate code                [blockedBy: T-subtasks or T-eval-{N-1}]
+  T-gen-N     R{N}: Generate code                [blockedBy: T-subtasks or T-aggr-{N-1}]
   T-rule-N    R{N}: Rule review                  [blockedBy: T-gen-N]
   T-qual-N    R{N}: Quality review               [blockedBy: T-gen-N]
   T-sec-N     R{N}: Security review              [blockedBy: T-gen-N]
   T-perf-N    R{N}: Performance review           [blockedBy: T-gen-N]
   T-arch-N    R{N}: Architecture review          [blockedBy: T-gen-N]
   T-aggr-N    R{N}: Aggregate reviews            [blockedBy: T-rule-N,T-qual-N,T-sec-N,T-perf-N,T-arch-N]
-  T-eval-N    R{N}: Evaluate                     [blockedBy: T-aggr-N]
 
 Review fix tasks (created on review FAIL, up to 3 iterations per round):
   T-fix-N-F   R{N}.{F}: Fix review issues        [blockedBy: T-aggr-N or T-rerev-N-{F-1}]
   T-rerev-N-F R{N}.{F}: Re-review                [blockedBy: T-fix-N-F]
 
 Completion tasks:
-  T-final     Finalize topic                     [blockedBy: last T-eval]
+  T-final     Finalize topic                     [blockedBy: last T-aggr]
   T-publish   Commit, push, and create PR        [blockedBy: T-final]
   T-reflect   Reflect on topic learnings          [blockedBy: T-publish]
 ```
@@ -102,7 +100,6 @@ Completion tasks:
       - `sub-tasks.md` 존재 → 4단계 완료
       - `build-result-r{N}.md` 존재 → 라운드 N 생성 완료
       - `code-review-r{N}.md` 존재 → 라운드 N 리뷰 완료
-      - `eval-result-r{N}.md` 존재 → 라운드 N 평가 완료
       - `completed/` 디렉토리에 토픽이 있음 → 6단계 완료
       - `git -C {WORKTREE_PATH} log --oneline -1`로 브랜치에 커밋 존재 확인
       - `gh pr list --head {branch}` 결과 있음 → 6a단계 완료
@@ -113,10 +110,9 @@ Completion tasks:
       - sub-tasks.md 없음 → 4단계부터 진행
       - 라운드 N의 build-result만 있음 → 5c(리뷰)부터 진행
       - 라운드 N의 code-review만 있음 → 결과 확인(5d)부터 진행
-      - 라운드 N의 eval-result가 PASS이고 `completed/`에 토픽 없음 → 6단계부터 진행
-      - 라운드 N의 eval-result가 PASS이고 `completed/`에 토픽 있고 PR 없음 → 6a단계부터 진행
+      - 라운드 N의 code-review가 PASS이고 `completed/`에 토픽 없음 → 6단계부터 진행
+      - `completed/`에 토픽 있고 PR 없음 → 6a단계부터 진행
       - PR 존재하고 reflection.md 없음 → 6b단계부터 진행
-      - 라운드 N의 eval-result가 FAIL → 라운드 N+1의 5a부터 진행
    e. 기존 작업이 있으면 ID를 매핑하고, 없으면 완료된 단계의 작업을 `completed` 상태로 생성합니다
    f. WORKTREE_PATH를 설정하고 해당 재개 지점의 단계로 **즉시 건너뜁니다**
 5. 존재하지 않으면 → **신규 실행**으로 1단계부터 시작합니다
@@ -217,7 +213,7 @@ TaskUpdate: T-subtasks → completed
 
 최대 라운드 = min(plan-config eval_rounds, CLAUDE.md max_eval_rounds). 라운드 1부터 루프:
 
-**핵심 원칙**: 라운드 카운터는 **평가(eval)가 실행될 때만** 증가합니다. 리뷰 실패 시에는 같은 라운드 내에서 즉시 수정하고 재리뷰합니다.
+**핵심 원칙**: 리뷰 실패 시에는 같은 라운드 내에서 즉시 수정하고 재리뷰합니다. 수정 반복 횟수를 초과하면 라운드를 증가시킵니다.
 
 최대 리뷰 수정 반복 = 3 (같은 라운드 내에서 리뷰 FAIL → 수정 → 재리뷰 최대 횟수)
 
@@ -227,14 +223,13 @@ TaskUpdate: T-subtasks → completed
 
 ```
 TaskCreate: "R{N}: Generate code", owner="generator",
-            addBlockedBy=[T-subtasks](R1) or [T-eval-{N-1}](R2+) → T-gen-N
+            addBlockedBy=[T-subtasks](R1) or [T-aggr-{N-1}](R2+) → T-gen-N
 TaskCreate: "R{N}: Rule review", owner="rule-reviewer", addBlockedBy=[T-gen-N] → T-rule-N
 TaskCreate: "R{N}: Quality review", owner="quality-reviewer", addBlockedBy=[T-gen-N] → T-qual-N
 TaskCreate: "R{N}: Security review", owner="security-reviewer", addBlockedBy=[T-gen-N] → T-sec-N
 TaskCreate: "R{N}: Performance review", owner="performance-reviewer", addBlockedBy=[T-gen-N] → T-perf-N
 TaskCreate: "R{N}: Architecture review", owner="architecture-reviewer", addBlockedBy=[T-gen-N] → T-arch-N
 TaskCreate: "R{N}: Aggregate reviews", addBlockedBy=[T-rule-N,T-qual-N,T-sec-N,T-perf-N,T-arch-N] → T-aggr-N
-TaskCreate: "R{N}: Evaluate", owner="evaluator", addBlockedBy=[T-aggr-N] → T-eval-N
 ```
 
 **5b. 생성**
@@ -255,7 +250,7 @@ TaskCreate: "R{N}: Evaluate", owner="evaluator", addBlockedBy=[T-aggr-N] → T-e
 **5d. 리뷰 결과 확인**
 
 `code-review-r{N}.md`를 읽습니다:
-- **PASS** → 5e로 계속 진행
+- **PASS** → 6단계로 진행
 - **FAIL** → 5d-fix 진입 (리뷰 수정 루프)
 
 **5d-fix. 리뷰 수정 루프** (같은 라운드 N 내에서 반복)
@@ -281,20 +276,10 @@ TaskCreate: "R{N}: Evaluate", owner="evaluator", addBlockedBy=[T-aggr-N] → T-e
    - 출력: `code-review-r{N}.{F}.md`
 
 4. 재리뷰 결과 확인:
-   - **PASS** → 5e로 계속 진행
+   - **PASS** → 6단계로 진행
    - **FAIL** + `F < 3` → `F++`, 5d-fix의 1번으로 돌아감
-   - **FAIL** + `F >= 3` → `TaskUpdate: T-eval-N → deleted`, 라운드 증가, 5a로 이동
-
-**5e. 평가**
-
-호출: `Skill: flowness:internal-evaluate, args="round={N} worktree={WORKTREE_PATH} topic={topic-dir} eval-tool={eval_tool} task-id={T-eval-N}"`
-
-**5f. 평가 결과 확인**
-
-`eval-result-r{N}.md`를 읽습니다:
-- **PASS** → 6단계
-- **FAIL** + 남은 라운드 있음 → 라운드 증가, 5a로 이동
-- **FAIL** + 남은 라운드 없음 → 7단계
+   - **FAIL** + `F >= 3` + 남은 라운드 있음 → 라운드 증가, 5a로 이동
+   - **FAIL** + `F >= 3` + 남은 라운드 없음 → 7단계 (에스컬레이션)
 
 ### 6단계: 성공 — Finalize
 
@@ -418,9 +403,9 @@ TaskUpdate: T-escalate → completed
 
 ## 중요 규칙
 
-- **절대로** 코드를 직접 작성, 리뷰 또는 평가하지 마세요 — 내부 스킬을 통해 위임합니다
+- **절대로** 코드를 직접 작성 또는 리뷰하지 마세요 — 내부 스킬을 통해 위임합니다
 - 각 파이프라인 단계는 별도의 내부 스킬 호출로 실행됩니다
 - 작업 ID를 전체적으로 추적합니다 — 상태 업데이트를 위해 내부 스킬에 전달합니다
 - 가시성을 위해 각 라운드 시작 시 모든 라운드 작업을 미리 생성합니다
-- 코드 리뷰가 FAIL이면 해당 라운드의 eval 작업을 삭제합니다
 - CLAUDE.md의 max_eval_rounds를 절대적 상한으로 준수합니다
+- 평가(evaluation)는 `/work` 루프에 포함되지 않습니다 — 사용자가 `/evaluate`로 별도 호출합니다

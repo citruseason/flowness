@@ -1,0 +1,37 @@
+# Sections
+
+규칙 파일의 카테고리와 우선순위를 정의합니다.
+파일명의 카테고리 접두사가 이 섹션에 매핑됩니다.
+
+## Sections
+
+| # | Section | Category Prefix | Priority | Description |
+|---|---------|----------------|----------|-------------|
+| 1 | {Section Name} | {category}- | CRITICAL | {one-line description} |
+| 2 | {Section Name} | {category}- | HIGH | {one-line description} |
+| 3 | {Section Name} | {category}- | MEDIUM | {one-line description} |
+
+## Category Prefix Convention
+
+규칙 파일명은 `{category}-{rule-name}.md` 형식을 따릅니다:
+
+- 카테고리 접두사는 위 테이블의 Category Prefix와 일치해야 합니다
+- 접두사로부터 소속 섹션과 우선순위가 자동 결정됩니다
+- 새 규칙을 추가할 때 적절한 카테고리 접두사를 선택하세요
+
+## Examples
+
+```
+# lib-react-query의 경우:
+queries-key-factory.md      → Section 1 (Queries)
+queries-options-pattern.md  → Section 1 (Queries)
+mutations-optimistic.md     → Section 2 (Mutations)
+cache-invalidation.md       → Section 3 (Cache Management)
+
+# pattern-domain-fsd의 경우:
+structure-application.md    → Section 1 (Structure)
+structure-entity.md         → Section 1 (Structure)
+boundaries-layer-deps.md    → Section 2 (Boundaries)
+composition-naming.md       → Section 3 (Composition)
+gates-feature-creation.md   → Section 4 (Creation Gates)
+```

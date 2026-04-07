@@ -51,25 +51,43 @@ Description: {user's original request}
 Project root: {project root path}
 
 Files to read:
-- templates/rules/RULES-GUIDE.md
-- templates/rules/RULE.md.template (READ this file — use as base for new RULE.md)
-- templates/rules/rule-detail.md.template (READ this file — use as base for each detail file)
+- templates/rules/RULES-GUIDE.md (folder structure, category prefix convention, compilation process)
+- templates/rules/SKILL.md.template (compiled rules format)
+- templates/rules/_sections.md.template (section metadata format)
+- templates/rules/rule-detail.md.template (individual rule file format)
 - ARCHITECTURE.md
 - harness/rules/ (scan existing)
-{If add-detail: - harness/rules/{existing-folder}/RULE.md}
+{If add-detail: - harness/rules/{existing-folder}/_sections.md}
+{If add-detail: - harness/rules/{existing-folder}/SKILL.md}
+{If add-detail: - harness/rules/{existing-folder}/*.md (all existing rule files)}
 ```
 
 Rule Writer가 완료될 때까지 대기합니다.
 
-### 3단계: CLAUDE.md 업데이트
+### 3단계: 심볼릭 링크 생성
+
+`.claude/skills/` 디렉토리에 규칙 폴더의 심볼릭 링크를 생성하여 Claude Code가 스킬로 인식하도록 합니다:
+
+```bash
+# .claude/skills/ 디렉토리가 없으면 생성
+mkdir -p .claude/skills
+
+# 상대 경로로 심볼릭 링크 생성
+ln -s ../../harness/rules/{prefix}-{name} .claude/skills/{prefix}-{name}
+```
+
+이미 링크가 존재하면 건너뜁니다.
+
+### 4단계: CLAUDE.md 업데이트
 
 새 규칙 폴더가 생성된 경우, CLAUDE.md의 규칙 섹션에 추가합니다.
 
-### 4단계: 요약
+### 5단계: 요약
 
 출력:
 - 무엇이 생성/업데이트되었는지
-- 생성된 파일 목록
+- 생성된 파일 목록 (SKILL.md + rules/)
+- `.claude/skills/` 심볼릭 링크 생성 여부
 - 기존 코드에 대해 새 규칙을 검증하기 위해 `/maintain lint` 실행을 제안
 
 ## 중요 규칙

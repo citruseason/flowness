@@ -67,14 +67,34 @@ TaskCreate: "Self-check and write build-result", activeForm="Running self-checks
 
 코드를 작성하기 전에 적용 가능한 모든 규칙을 반드시 내재화해야 합니다. 이것은 선택 사항이 아닙니다.
 
-### 단계 1: 규칙 치트시트 작성
+### 단계 1: 규칙 스킬 로드
 
-적용 가능한 모든 규칙 폴더의 모든 상세 파일을 읽으세요. 그런 다음 이 세션을 위한 **규칙 치트시트**를 작성하세요:
+build-contract.md에 나열된 적용 가능한 규칙 폴더의 **SKILL.md**를 읽으세요. SKILL.md는 Quick Reference 인덱스로, 카테고리별 규칙 목록과 우선순위를 제공합니다.
+
+```
+Read: harness/rules/{prefix}-{name}/SKILL.md
+```
+
+SKILL.md의 Quick Reference에서 이 작업에 적용 가능한 규칙을 파악한 뒤, 해당 규칙의 **상세 파일**을 읽으세요:
+
+```
+Read: harness/rules/{prefix}-{name}/rules/{category}-{rule-name}.md
+```
+
+각 상세 파일에는 다음이 포함되어 있습니다:
+- 규칙이 중요한 이유와 영향도
+- Incorrect 코드 예시와 설명
+- Correct 코드 예시와 설명
+- 추가 컨텍스트 및 엣지 케이스
+
+**SKILL.md가 없는 규칙 폴더**: 폴더 내 모든 `.md` 파일을 직접 읽고 아래 형식으로 치트시트를 수동 작성합니다 (레거시 폴백).
+
+로드한 규칙을 세션용 **규칙 치트시트**로 정리하세요:
 
 ```
 ## Rule Cheatsheet
 
-### {rule-folder-name}
+### {rule-folder-name} (from SKILL.md)
 - MUST: {concrete constraint}
 - MUST NOT: {concrete anti-pattern with example}
 - EXAMPLE ✓: {one-line correct pattern}

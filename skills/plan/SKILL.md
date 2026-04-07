@@ -3,7 +3,7 @@ name: plan
 description: Collaboratively brainstorm and expand a short prompt into a full product specification. Asks clarifying questions to fill gaps, then spawns Planner and Plan Reviewer subagents. Creates product-spec, topic code, and execution plan. Run after /setup.
 description-ko: 짧은 프롬프트를 협력적으로 브레인스토밍하여 완전한 제품 명세로 확장합니다. 부족한 부분을 채우기 위해 질문하고, Planner와 Plan Reviewer 서브에이전트를 생성합니다. 제품 명세, 토픽 코드, 실행 계획을 생성합니다. /setup 이후에 실행하세요.
 user-invocable: true
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, Skill
 argument-hint: "<feature-description>"
 ---
 
@@ -33,70 +33,14 @@ node "$(find ~/.claude/plugins -name 'codex-companion.mjs' 2>/dev/null | head -1
 
 결과에 `"ready": true`가 포함되어 있으면 `CODEX_AVAILABLE=true`로 설정합니다. 그렇지 않으면 `CODEX_AVAILABLE=false`입니다. 스크립트를 찾을 수 없으면 `CODEX_AVAILABLE=false`입니다.
 
-### 1단계: 브레인스토밍
-
-서브에이전트를 생성하기 전에 사용자의 의도를 협력적으로 명확히 합니다.
-
-**1a. 프롬프트 분석**
-
-$ARGUMENTS를 다음 6가지 차원에서 평가합니다. 각 차원을 **명확** 또는 **불명확**으로 표시합니다:
-
-| 차원 | 해결할 질문 |
-|------|-----------|
-| 문제 | 이것이 어떤 정확한 문제를 해결하는가? |
-| 사용자 | 누가, 어떤 맥락에서 사용하는가? |
-| 범위 | 명시적으로 범위에 포함/제외되는 것은? |
-| 제약 조건 | 기술적, 시간적, 리소스 제한은? |
-| 성공 기준 | 완료를 어떻게 판단하는가? |
-| 통합 | 기존 기능과 어떻게 결합되는가? |
-
-프롬프트에서 4개 이상의 차원이 이미 명확하면 2단계로 건너뜁니다.
-
-**1b. 타겟 질문하기**
-
-각 **불명확** 차원에 대해 2~4개의 대표 옵션과 함께 집중 질문을 작성합니다. `AskUserQuestion`을 사용하여 라운드당 최대 4개 질문을 합니다.
-
-좋은 질문을 위한 가이드라인:
-- 진정으로 불명확한 차원에 대해서만 질문합니다 — 프롬프트가 이미 답한 것은 질문하지 마세요
-- 옵션은 가장 가능성 있는 답변을 포함해야 합니다; "기타"는 항상 사용 가능합니다
-- 질문을 간결하게 작성합니다; 전문 용어를 피하세요
-
-**1c. 평가 및 충분할 때까지 반복**
-
-각 질문 라운드 후 6가지 차원을 모두 재평가합니다. **모든 중요 차원이 탄탄한 명세를 작성할 수 있을 만큼 명확해질 때까지** 계속 질문합니다. 라운드 제한은 없습니다 — 의미 있는 격차가 남아있는 한 계속합니다.
-
-다음 질문에 확신을 가지고 답할 수 있을 때 중단합니다: *"개발자가 추측 없이 이를 구현하기에 충분한 정보가 있는가?"*
-
-**1d. 풍부한 컨텍스트 정리**
-
-모든 것을 Planner에게 전달할 **풍부한 컨텍스트** 블록으로 요약합니다:
-
-```
-## Enriched Context
-
-### Original prompt
-{$ARGUMENTS}
-
-### Clarified dimensions
-- Problem: {answer}
-- Users: {answer}
-- Scope: {in scope: ... / out of scope: ...}
-- Constraints: {answer}
-- Success criteria: {answer}
-- Integration: {answer}
-
-### Key decisions from brainstorming
-- {any notable decision or trade-off surfaced during discussion}
-```
-
-### 2단계: 기존 컨텍스트 읽기
+### 1단계: 기존 컨텍스트 읽기
 
 1. 프로젝트 설정을 위해 CLAUDE.md를 읽습니다
 2. 현재 구조를 위해 ARCHITECTURE.md를 읽습니다
 3. 기존 명세 확인을 위해 harness/product-specs/를 스캔합니다 (중복 방지)
 4. 진행 중인 작업을 위해 harness/exec-plans/active/를 확인합니다
 
-### 3단계: 토픽 코드 할당
+### 2단계: 토픽 코드 할당
 
 현재 날짜와 시간을 사용하여 타임스탬프 기반 토픽 코드를 생성합니다:
 
@@ -105,9 +49,66 @@ date +H%Y%m%d%H%M%S
 # e.g. H20260402143022
 ```
 
+$ARGUMENTS에서 kebab-case 토픽 이름을 도출합니다.
+
 형식: `H{YYYYMMDDHHmmss}_{kebab-case-topic-name}`
 
-토픽 디렉토리를 생성합니다: `harness/exec-plans/active/{topic-code}_{topic-name}/`
+토픽 디렉토리를 생성합니다: `harness/exec-plans/active/{topic}/`
+
+### 3단계: 브레인스토밍 (superpowers:brainstorming)
+
+`superpowers:brainstorming` 스킬을 호출하여 사용자의 의도를 협력적으로 탐색하고 디자인 문서를 생성합니다.
+
+**3a. 브레인스토밍 스킬 호출**
+
+호출: `Skill: superpowers:brainstorming, args="{$ARGUMENTS}"`
+
+이 스킬이 다음을 수행합니다:
+- 프로젝트 컨텍스트 탐색
+- 명확화 질문 (한 번에 하나씩)
+- 2~3개 접근 방식 제안 및 트레이드오프 분석
+- 디자인 섹션별 승인
+- 디자인 문서 작성
+- 명세 자체 검증
+
+**경로 오버라이드**: 브레인스토밍 스킬이 디자인 문서를 저장할 때, 기본 경로(`docs/superpowers/specs/`) 대신 **반드시** 다음 경로에 저장하도록 지시합니다:
+
+```
+harness/exec-plans/active/{topic}/design-doc.md
+```
+
+args에 다음을 추가합니다:
+```
+Design document output path: harness/exec-plans/active/{topic}/design-doc.md
+Do NOT write to docs/superpowers/specs/. Use the path above instead.
+```
+
+**중요**: 브레인스토밍 스킬이 "writing-plans 스킬로 전환"을 시도하면 **따르지 마세요**. 디자인 문서가 완성되고 사용자 승인이 끝나면 즉시 3b로 진행합니다.
+
+**3b. 디자인 문서 확인 및 풍부한 컨텍스트 생성**
+
+브레인스토밍 완료 후, 디자인 문서를 읽습니다:
+
+```
+Read: harness/exec-plans/active/{topic}/design-doc.md
+```
+
+만약 파일이 없으면 `docs/superpowers/specs/*-design.md`에서 가장 최근 파일을 찾아 `harness/exec-plans/active/{topic}/design-doc.md`로 복사합니다 (폴백).
+
+디자인 문서의 내용을 Planner에게 전달할 **풍부한 컨텍스트** 블록으로 구조화합니다:
+
+```
+## Enriched Context
+
+### Original prompt
+{$ARGUMENTS}
+
+### Design document
+{harness/exec-plans/active/{topic}/design-doc.md 전체 내용}
+
+### Key decisions from brainstorming
+- {디자인 문서에서 추출한 주요 결정사항 및 트레이드오프}
+```
 
 ### 4단계: Planner-Reviewer 루프
 
@@ -124,11 +125,12 @@ Round: {N}
 Topic directory: harness/exec-plans/active/{topic}/
 Project root: {project root path}
 
-{Enriched Context from Step 1}
+{Enriched Context from Step 3}
 
 Files to read:
 - CLAUDE.md
 - ARCHITECTURE.md
+- harness/exec-plans/active/{topic}/design-doc.md (brainstorming output)
 - harness/product-specs/ (scan for existing specs)
 {If N > 1: - harness/exec-plans/active/{topic}/plan-review-result.md (reviewer feedback)}
 

@@ -1,24 +1,29 @@
 ---
 title: Rule Title Here
 impact: MEDIUM
-impactDescription: Optional description of impact
-tags: tag1, tag2
+impactDescription: Quantified impact description (e.g., "prevents N+1 queries", "reduces bundle by 30%+")
+tags: tag1, tag2, tag3
 ---
 
 ## Rule Title Here
 
-**Impact: MEDIUM (optional impact description)**
+**Impact: MEDIUM — {impactDescription}**
 
-Brief explanation of the rule and why it matters.
+{규칙 설명 — 왜 중요한지, 위반 시 어떤 문제가 발생하는지.
+구체적인 수치나 시나리오로 영향을 설명합니다.}
 
-**Incorrect (description of what's wrong):**
+**Incorrect:**
 
 ```typescript
+// {무엇이 잘못된지 — 안티패턴 설명}
 // Bad code example here
 ```
 
-**Correct (description of what's right):**
+**Correct:**
 
 ```typescript
+// {왜 올바른지 — 개선 포인트 설명}
 // Good code example here
 ```
+
+{추가 컨텍스트: 엣지 케이스, 예외 상황, 관련 규칙 참조 등 (선택사항)}

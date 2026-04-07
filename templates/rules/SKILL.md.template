@@ -1,0 +1,56 @@
+---
+name: rule-{prefix}-{name}
+description: "{Triggering conditions}. {What it enforces}."
+description-ko: "{한국어 트리거 설명}"
+user-invocable: false
+allowed-tools: Read, Grep, Glob
+---
+
+# {Rule Area Name}
+
+> 이 규칙은 특정 프로젝트 경로에 의존하지 않습니다. 프로젝트별 구조는 ARCHITECTURE.md를 참조하세요.
+
+{Brief overview — what this rule area covers, why it matters, total N rules across M categories.}
+
+## When to Apply
+
+- {상황 1}
+- {상황 2}
+- {상황 3}
+
+## Rule Categories by Priority
+
+| Priority | Category | Impact | Prefix |
+|----------|----------|--------|--------|
+| 1 | {Category Name} | CRITICAL | `{category}-` |
+| 2 | {Category Name} | HIGH | `{category}-` |
+| 3 | {Category Name} | MEDIUM | `{category}-` |
+
+## Quick Reference
+
+### 1. {Category Name} (CRITICAL)
+
+- `{category}-{rule-name}` — {one-line description}
+- `{category}-{rule-name}` — {one-line description}
+
+### 2. {Category Name} (HIGH)
+
+- `{category}-{rule-name}` — {one-line description}
+
+### 3. {Category Name} (MEDIUM)
+
+- `{category}-{rule-name}` — {one-line description}
+
+## How to Use
+
+개별 규칙 파일에서 상세 설명과 코드 예시를 확인하세요:
+
+```
+rules/{category}-{rule-name}.md
+```
+
+각 규칙 파일에는 다음이 포함됩니다:
+- 규칙이 중요한 이유
+- Incorrect 코드 예시와 설명
+- Correct 코드 예시와 설명
+- 추가 컨텍스트 및 참조
