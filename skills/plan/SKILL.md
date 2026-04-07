@@ -1,7 +1,7 @@
 ---
 name: plan
-description: Collaboratively brainstorm and expand a short prompt into a full product specification. Asks clarifying questions to fill gaps, then spawns Planner and Plan Reviewer subagents. Creates product-spec, topic code, and execution plan. Run after /setup.
-description-ko: 짧은 프롬프트를 협력적으로 브레인스토밍하여 완전한 제품 명세로 확장합니다. 부족한 부분을 채우기 위해 질문하고, Planner와 Plan Reviewer 서브에이전트를 생성합니다. 제품 명세, 토픽 코드, 실행 계획을 생성합니다. /setup 이후에 실행하세요.
+description: Collaboratively brainstorm, write technical plan and product spec with separate review cycles for each. Spawns Planner and Plan Reviewer subagents. Run after /setup.
+description-ko: 협력적 브레인스토밍 후 기술 계획서와 제품 명세서를 각각 작성-리뷰 사이클로 검증합니다. Planner와 Plan Reviewer 서브에이전트를 생성합니다. /setup 이후에 실행하세요.
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, Skill
 argument-hint: "<feature-description>"
@@ -13,7 +13,7 @@ argument-hint: "<feature-description>"
 
 ## 역할
 
-Planner와 Plan Reviewer 에이전트를 조율하여 검증된 제품 명세를 만듭니다. 직접 명세를 작성하지 않습니다. 서브에이전트를 생성하고 파일 기반 핸드오프를 통해 작업을 조율합니다.
+Planner와 Plan Reviewer 에이전트를 조율하여 검증된 기술 계획서와 제품 명세서를 만듭니다. 두 문서는 각각 독립된 **작성 → 리뷰** 사이클을 거칩니다. 직접 문서를 작성하지 않습니다 — 서브에이전트를 생성하고 파일 기반 핸드오프를 통해 조율합니다.
 
 ## 입력
 
@@ -110,17 +110,18 @@ Read: harness/exec-plans/active/{topic}/design-doc.md
 - {디자인 문서에서 추출한 주요 결정사항 및 트레이드오프}
 ```
 
-### 4단계: Planner-Reviewer 루프
+### 4단계: Plan 문서 작성-리뷰 사이클
 
-Plan Reviewer가 8가지 기준을 모두 통과할 때까지 반복합니다. 최대 CLAUDE.md의 max_plan_rounds(기본값: 5)까지.
+기술 계획서(plan-doc.md)를 작성하고 리뷰합니다. 최대 max_plan_rounds까지.
 
 #### 라운드 N:
 
-**4a. Planner 서브에이전트 생성**
+**4a. Planner 서브에이전트 생성 (Plan 모드)**
 
 Agent 도구를 `subagent_type: flowness:planner`로 사용하고 다음 프롬프트를 전달합니다:
 
 ```
+Mode: plan
 Round: {N}
 Topic directory: harness/exec-plans/active/{topic}/
 Project root: {project root path}
@@ -134,32 +135,30 @@ Files to read:
 - harness/product-specs/ (scan for existing specs)
 {If N > 1: - harness/exec-plans/active/{topic}/plan-review-result.md (reviewer feedback)}
 
-Write the product spec to: harness/product-specs/{topic-name}.md
+Write the plan document to: harness/exec-plans/active/{topic}/plan-doc.md
 ```
 
-Planner 서브에이전트가 완료될 때까지 대기합니다.
+**4b. Plan 문서 확인**
 
-**4b. 제품 명세 확인**
+`harness/exec-plans/active/{topic}/plan-doc.md`를 읽어서 생성되었는지 확인합니다.
 
-`harness/product-specs/{topic-name}.md`를 읽어서 생성되었는지 확인합니다.
+**4c. 리뷰어 생성 (Plan 리뷰 모드)**
 
-**4c. 리뷰어를 병렬로 생성**
-
-두 리뷰어를 단일 메시지에서 동시에 생성합니다.
+리뷰어를 병렬로 생성합니다.
 
 **리뷰어 1: Plan Reviewer**
 
-Agent 도구를 `subagent_type: flowness:plan-reviewer`로 사용하고 다음 프롬프트를 전달합니다:
+Agent 도구를 `subagent_type: flowness:plan-reviewer`로 사용합니다:
 
 ```
+Mode: plan
 Round: {N}
 Topic directory: harness/exec-plans/active/{topic}/
-Product spec: harness/product-specs/{topic-name}.md
+Document: harness/exec-plans/active/{topic}/plan-doc.md
 
 Files to read:
-- harness/product-specs/{topic-name}.md
+- harness/exec-plans/active/{topic}/plan-doc.md
 - ARCHITECTURE.md
-- harness/product-specs/ (other existing specs for context)
 - CLAUDE.md
 
 Write your review to: harness/exec-plans/active/{topic}/plan-review-result.md
@@ -167,22 +166,17 @@ Write your review to: harness/exec-plans/active/{topic}/plan-review-result.md
 
 **리뷰어 2: Codex 기술 리뷰어** _(CODEX_AVAILABLE=true인 경우에만)_
 
-Agent 도구를 `subagent_type: flowness:codex-plan-reviewer`로 사용하고 다음 프롬프트를 전달합니다:
+Agent 도구를 `subagent_type: flowness:codex-plan-reviewer`로 사용합니다:
 
 ```
 Round: {N}
-Product spec: harness/product-specs/{topic-name}.md
+Document: harness/exec-plans/active/{topic}/plan-doc.md
 Topic directory: harness/exec-plans/active/{topic}/
 ```
 
-생성된 모든 리뷰어가 완료될 때까지 대기합니다.
-
 **4d. 결과 종합 및 확인**
 
-`harness/exec-plans/active/{topic}/plan-review-result.md` (Plan Reviewer 출력)를 읽습니다.
-`CODEX_AVAILABLE=true`인 경우, Codex 리뷰어의 반환 텍스트에서 상태와 이슈를 해석합니다.
-
-최종 `plan-review-result.md`로 통합합니다:
+`plan-review-result.md`를 읽고 통합합니다:
 
 ```markdown
 # Plan Review Result
@@ -201,11 +195,102 @@ Topic directory: harness/exec-plans/active/{topic}/
 - FAIL if either reviewer returns FAIL (list all blocking issues)
 ```
 
-- 상태가 PASS → 루프를 종료하고 5단계로 진행
-- 상태가 FAIL이고 라운드 < max_plan_rounds → 루프를 계속합니다 (Planner가 통합 피드백을 기반으로 수정)
-- 상태가 FAIL이고 라운드 >= max_plan_rounds → 6단계로 진행 (사용자에게 에스컬레이션)
+- PASS → 5단계로 진행
+- FAIL + 라운드 남음 → Planner가 피드백 기반으로 수정 (4a로)
+- FAIL + 최대 라운드 → 7단계 (에스컬레이션)
 
-### 5단계: plan-config 생성 및 마무리
+### 5단계: Spec 문서 작성-리뷰 사이클
+
+검증된 plan-doc을 기반으로 제품 명세서(product-spec.md)를 작성하고 리뷰합니다. 최대 max_plan_rounds까지.
+
+#### 라운드 N:
+
+**5a. Planner 서브에이전트 생성 (Spec 모드)**
+
+Agent 도구를 `subagent_type: flowness:planner`로 사용합니다:
+
+```
+Mode: spec
+Round: {N}
+Topic directory: harness/exec-plans/active/{topic}/
+Project root: {project root path}
+
+Files to read:
+- harness/exec-plans/active/{topic}/plan-doc.md (approved plan document)
+- harness/exec-plans/active/{topic}/design-doc.md (brainstorming output)
+- CLAUDE.md
+- ARCHITECTURE.md
+- harness/product-specs/ (scan for existing specs)
+{If N > 1: - harness/exec-plans/active/{topic}/spec-review-result.md (reviewer feedback)}
+
+Write the product spec to: harness/product-specs/{topic-name}.md
+```
+
+**5b. 제품 명세 확인**
+
+`harness/product-specs/{topic-name}.md`를 읽어서 생성되었는지 확인합니다.
+
+**5c. 리뷰어 생성 (Spec 리뷰 모드)**
+
+리뷰어를 병렬로 생성합니다.
+
+**리뷰어 1: Plan Reviewer**
+
+Agent 도구를 `subagent_type: flowness:plan-reviewer`로 사용합니다:
+
+```
+Mode: spec
+Round: {N}
+Topic directory: harness/exec-plans/active/{topic}/
+Document: harness/product-specs/{topic-name}.md
+Plan document: harness/exec-plans/active/{topic}/plan-doc.md
+
+Files to read:
+- harness/product-specs/{topic-name}.md
+- harness/exec-plans/active/{topic}/plan-doc.md
+- ARCHITECTURE.md
+- harness/product-specs/ (other existing specs for context)
+- CLAUDE.md
+
+Write your review to: harness/exec-plans/active/{topic}/spec-review-result.md
+```
+
+**리뷰어 2: Codex 기술 리뷰어** _(CODEX_AVAILABLE=true인 경우에만)_
+
+Agent 도구를 `subagent_type: flowness:codex-plan-reviewer`로 사용합니다:
+
+```
+Round: {N}
+Document: harness/product-specs/{topic-name}.md
+Topic directory: harness/exec-plans/active/{topic}/
+```
+
+**5d. 결과 종합 및 확인**
+
+`spec-review-result.md`를 읽고 통합합니다:
+
+```markdown
+# Spec Review Result
+
+## Round: {N}
+## Status: PASS | FAIL
+
+## Plan Reviewer
+{plan-reviewer output}
+
+## Codex Technical Review
+{codex output — or "Not available" if CODEX_AVAILABLE=false}
+
+## Combined verdict
+- PASS only if BOTH reviewers return PASS
+- FAIL if either reviewer returns FAIL (list all blocking issues)
+```
+
+- PASS → 6단계로 진행
+- FAIL + 라운드 남음 → Planner가 피드백 기반으로 수정 (5a로)
+- FAIL + 최대 라운드 → 7단계 (에스컬레이션)
+
+### 6단계: plan-config 생성 및 마무리
 
 검증된 제품 명세를 기반으로 작업의 복잡도를 평가합니다.
 
@@ -249,12 +334,12 @@ CLAUDE.md를 새 토픽으로 활성 토픽 섹션에 업데이트합니다.
 
 출력 요약:
 - 할당된 토픽 코드
-- 제품 명세 위치
-- 리뷰 결과 (라운드 N에서 통과)
+- Plan 문서 위치 및 리뷰 결과 (라운드 N에서 통과)
+- 제품 명세 위치 및 리뷰 결과 (라운드 N에서 통과)
 - 복잡도 평가
 - 다음 단계: `/work {topic-code}` 실행
 
-### 6단계: 최대 라운드 후 리뷰 실패
+### 7단계: 최대 라운드 후 리뷰 실패
 
 미해결 이슈와 함께 최신 plan-review-result.md를 사용자에게 출력합니다. 다음을 질문합니다:
 - 특정 리뷰어 우려사항을 해결하고 `/plan`을 다시 실행
@@ -262,9 +347,11 @@ CLAUDE.md를 새 토픽으로 활성 토픽 섹션에 업데이트합니다.
 
 ## 중요 규칙
 
-- 절대로 제품 명세를 직접 작성하지 마세요 - Planner 서브에이전트에 위임합니다
-- 절대로 명세를 직접 리뷰하지 마세요 - Plan Reviewer 서브에이전트에 위임합니다
-- 에이전트 동작은 agents/ 파일에 정의됩니다 - 프롬프트에는 동적 컨텍스트만 전달합니다
+- 절대로 plan-doc이나 product-spec을 직접 작성하지 마세요 — Planner 서브에이전트에 위임합니다
+- 절대로 문서를 직접 리뷰하지 마세요 — Plan Reviewer 서브에이전트에 위임합니다
+- **두 사이클은 독립적**: Plan 리뷰가 PASS해야 Spec 사이클 진입. Spec 리뷰 실패는 plan-doc을 수정하지 않습니다
+- Planner에게 `Mode: plan` 또는 `Mode: spec`을 반드시 전달합니다
+- 에이전트 동작은 agents/ 파일에 정의됩니다 — 프롬프트에는 동적 컨텍스트만 전달합니다
 - 같은 토픽의 product-spec이 이미 존재하면 업데이트할지 새로 생성할지 사용자에게 물어봅니다
 - 항상 CLAUDE.md의 max_eval_rounds를 작업 eval_rounds의 상한으로 확인합니다
 - Codex 리뷰어는 선택사항입니다 — CODEX_AVAILABLE=false이면 Plan Reviewer만으로 진행합니다
