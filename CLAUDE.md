@@ -168,15 +168,14 @@ cat .claude-plugin/plugin.json | grep version
 
 ## 활성 토픽
 
-본 플러그인 자체의 현재 활성 토픽 (미팅 `M20260416071814_work-loop-redesign`의 outputs, 권장 진행 순서 1→2→3→4):
-
-1. `T20260416081240_using-worktree-skill` — `internal-worktree` → `using-worktree` rename, user-invocable, AskUserQuestion 통합, sub-task 제거.
-2. `T20260416081244_work-task-tracking` — `task.md` 도입, `/work` 0단계 자동 파생, plan.md ↔ task.md 매핑.
-3. `T20260416081248_work-tdd-split` — `/work-tdd` 신규 스킬, `/work` 3-step 정리, internal-tdd 통합. (의존: `T20260416081244`)
-4. `T20260416081252_work-review-collapse` — 5 reviewer 에이전트 삭제, `code-reviewer` 신규, `code-reviews/` 폴더 도입. (의존: `T20260416081244`)
+현재 진행 중인 토픽 없음.
 
 완료된 이전 토픽:
 
+- `T20260416081240_using-worktree-skill` — `internal-worktree` → `using-worktree` rename, user-invocable, AskUserQuestion 통합, sub-task 제거. (M20260416071814 결정 5)
+- `T20260416081244_work-task-tracking` — `task.md` 도입, `/work` 0단계 자동 파생, plan.md ↔ task.md 매핑. (M20260416071814 결정 1·4)
+- `T20260416081248_work-tdd-split` — `/work-tdd` 신규 스킬, `/work` 3-step 정리, internal-tdd 통합. (M20260416071814 결정 2)
+- `T20260416081252_work-review-collapse` — 5 reviewer 에이전트 삭제, `code-reviewer` 신규, `code-reviews/` 폴더 도입. (M20260416071814 결정 3·4)
 - `H20260416152940_design-doc-split` — `/plan` 분해 (`/meeting` + `/design-doc`) 재설계.
 - `H20260416065800_work-path-integration` — `/work` 및 내부 스킬의 harness 경로 참조 통합.
 
