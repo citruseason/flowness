@@ -1,0 +1,36 @@
+---
+code: {{M_CODE}}
+slug: {{SLUG}}
+title: "{{TITLE}}"
+status: draft
+created: {{ISO_UTC}}
+updated: {{ISO_UTC}}
+participants:
+  - user
+  - claude (brainstormer)
+outputs: []
+---
+
+# 회의 요약
+
+## 문제 정의
+
+<!-- 해결하려는 문제. 1~3 paragraph. -->
+
+## 확정된 결정 사항
+
+<!-- 브레인스토밍에서 사용자가 확정한 항목만 나열. 번호는 1부터 증가. -->
+
+### 1. {{제목}}
+- 요약: ...
+- 근거: ...
+
+### 2. ...
+
+## Open Questions
+
+<!-- 추가 조사 또는 사용자 결정이 필요한 질문. 없으면 "없음". -->
+
+## 다음 단계
+
+<!-- design-doc topic으로 넘어갈 때 가장 먼저 다룰 항목. -->

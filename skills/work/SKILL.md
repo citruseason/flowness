@@ -94,24 +94,22 @@ Completion tasks:
 3. WORKTREE_PATH 디렉토리가 이미 존재하는지 확인합니다
 4. 존재하면 → **재개 모드**로 진입합니다:
    a. `TaskList`로 기존 작업 목록을 확인합니다
-   b. 토픽 디렉토리를 찾습니다: `Glob: {WORKTREE_PATH}/harness/exec-plans/active/$ARGUMENTS_*/`
+   b. 토픽 디렉토리를 찾습니다: `Glob: {WORKTREE_PATH}/harness/topics/$ARGUMENTS_*/`
    c. 다음 파일들의 존재 여부로 완료된 단계를 판단합니다:
       - `build-contract.md` 존재 → 3단계 완료
       - `sub-tasks.md` 존재 → 4단계 완료
       - `build-result-r{N}.md` 존재 → 라운드 N 생성 완료
       - `code-review-r{N}.md` 존재 → 라운드 N 리뷰 완료
-      - `completed/` 디렉토리에 토픽이 있음 → 6단계 완료
+      - `reflection.md` 존재 → 토픽 완료 (6b단계까지 진행됨)
       - `git -C {WORKTREE_PATH} log --oneline -1`로 브랜치에 커밋 존재 확인
       - `gh pr list --head {branch}` 결과 있음 → 6a단계 완료
-      - `reflection.md` 존재 → 6b단계 완료
    d. **재개 지점을 결정합니다**:
       - 토픽 디렉토리 없음 → 2단계(컨텍스트 로드)부터 진행
       - build-contract.md 없음 → 2단계(컨텍스트 로드)부터 진행
       - sub-tasks.md 없음 → 4단계부터 진행
       - 라운드 N의 build-result만 있음 → 5c(리뷰)부터 진행
       - 라운드 N의 code-review만 있음 → 결과 확인(5d)부터 진행
-      - 라운드 N의 code-review가 PASS이고 `completed/`에 토픽 없음 → 6단계부터 진행
-      - `completed/`에 토픽 있고 PR 없음 → 6a단계부터 진행
+      - 라운드 N의 code-review가 PASS이고 PR 없음 → 6단계부터 진행
       - PR 존재하고 reflection.md 없음 → 6b단계부터 진행
    e. 기존 작업이 있으면 ID를 매핑하고, 없으면 완료된 단계의 작업을 `completed` 상태로 생성합니다
    f. WORKTREE_PATH를 설정하고 해당 재개 지점의 단계로 **즉시 건너뜁니다**
@@ -133,13 +131,13 @@ TaskUpdate: T-setup → in_progress
 ### 2단계: 컨텍스트 로드
 
 1. `{WORKTREE_PATH}/CLAUDE.md`를 읽습니다 — 프로젝트 설정 (max_eval_rounds, eval_tool)
-2. `{WORKTREE_PATH}/harness/exec-plans/active/$ARGUMENTS_*/`를 Glob합니다 — 토픽 디렉토리 찾기
+2. `{WORKTREE_PATH}/harness/topics/$ARGUMENTS_*/`를 Glob합니다 — 토픽 디렉토리 찾기
 3. `plan-config.md`를 읽습니다 — 동적 설정 (eval_rounds, 복잡도)
-4. `{WORKTREE_PATH}/harness/product-specs/`에서 제품 명세를 읽습니다
+4. 동일 토픽 디렉토리의 `spec.md`를 읽습니다 — 제품 명세
 5. CLAUDE.md에서 eval-criteria/ 파일을 읽습니다
 6. plan-config.md에서 적용 가능한 규칙을 식별합니다
 
-토픽 디렉토리를 찾을 수 없으면 사용자에게 `/plan`을 먼저 실행하라고 안내합니다.
+토픽 디렉토리를 찾을 수 없으면 사용자에게 `/meeting` 후 `/design-doc`을 먼저 실행하라고 안내합니다.
 
 ```
 TaskUpdate: T-setup → completed
@@ -152,19 +150,19 @@ TaskCreate: "Create build contract", activeForm="Creating build contract", addBl
 TaskUpdate: T-contract → in_progress
 ```
 
-`{WORKTREE_PATH}/harness/exec-plans/active/{topic}/build-contract.md`를 생성합니다:
+`{WORKTREE_PATH}/harness/topics/{topic}/build-contract.md`를 생성합니다:
 
 ```markdown
 # Build Contract: {topic-name}
 
 ## Scope
-[What will be built, derived from product-spec]
+[What will be built, derived from spec.md]
 
 ## Completion Criteria
 - [ ] Criterion 1: ...
 
 ## Referenced Spec
-- product-specs/{topic-name}.md
+- topics/{topic}/spec.md
 
 ## Applicable Rules
 - rules/{prefix}-{name}/
@@ -190,7 +188,7 @@ TaskUpdate: T-subtasks → in_progress
 
 build-contract와 ARCHITECTURE.md를 분석합니다. **분할 규칙**: 각 파일은 최대 하나의 하위 작업에만 소유됩니다.
 
-`{WORKTREE_PATH}/harness/exec-plans/active/{topic}/sub-tasks.md`를 생성합니다:
+`{WORKTREE_PATH}/harness/topics/{topic}/sub-tasks.md`를 생성합니다:
 
 ```markdown
 # Sub-tasks: {topic-name}
@@ -288,8 +286,8 @@ TaskCreate: "Finalize topic", activeForm="Finalizing topic" → T-final
 TaskUpdate: T-final → in_progress
 ```
 
-1. 토픽을 `active/`에서 `completed/`로 이동합니다
-2. CLAUDE.md를 업데이트합니다: 토픽을 완료 토픽으로 이동
+1. CLAUDE.md를 업데이트합니다: 활성 토픽 섹션에서 본 토픽을 제거하거나 완료로 표기합니다
+2. 토픽 디렉토리는 이동하지 않습니다. 완료 마커는 6b단계에서 작성되는 `harness/topics/{topic}/reflection.md` 존재로 판단됩니다
 
 ```
 TaskUpdate: T-final → completed

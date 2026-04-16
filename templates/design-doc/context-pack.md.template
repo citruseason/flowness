@@ -1,0 +1,35 @@
+---
+topic: {{H_CODE}}
+generated: {{ISO_UTC}}
+---
+
+# Context Pack
+
+<!--
+팀이 세션당 1회만 읽는 문서. 크기 상한 5,000 토큰.
+이 파일의 목적은 사이클 내내 재참조할 "고정 컨텍스트"를 한 장에 집약하는 것이다.
+-->
+
+## Project config (summary of CLAUDE.md)
+
+<!-- 기술 스택, 컨벤션, 활성 토픽, 학습 시스템 여부 등 핵심만. -->
+
+## Architecture snapshot (summary of ARCHITECTURE.md)
+
+<!-- 레이어, 도메인, 의존성 방향, 기술 스택. 원문 복사 금지. -->
+
+## Meeting digest
+
+<!-- meeting.md 확정 사항 리스트 + 각 항목 1~2줄 요약. -->
+
+## Other topics in harness/topics/
+
+<!-- 현재 topic과 관련이 있을 수 있는 다른 토픽 한 줄 요약. 없으면 "none". -->
+
+## Constraints
+
+<!-- 반드시 준수해야 할 제약 (보안, 컴플라이언스, 호환성 등). -->
+
+## Glossary
+
+<!-- 본 토픽에서 자주 쓰이는 용어 정의. -->

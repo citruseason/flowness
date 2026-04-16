@@ -1,0 +1,32 @@
+---
+decision: {{DECISION_ID}}
+round: {{N}}
+kind: proposal
+author: design-doc-planner
+created: {{ISO_UTC}}
+---
+
+# r{{N}} proposal for {{DECISION_ID}} — {{TITLE}}
+
+## Change from r{{N-1}}
+
+<!-- r1인 경우 "initial proposal"로 기록. -->
+
+## Proposal
+
+### Summary
+
+### Rationale
+
+### Acceptance criteria
+
+<!-- Plan 모드인 경우 "Acceptance criteria" 대신
+     - Options considered
+     - Chosen option
+     - Trade-offs
+     를 사용한다.
+-->
+
+### Open questions
+
+<!-- 없으면 "None". -->

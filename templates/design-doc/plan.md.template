@@ -1,0 +1,44 @@
+---
+topic: {{H_CODE}}
+slug: {{SLUG}}
+status: in-progress
+spec_hash: {{SPEC_SHA8}}
+---
+
+# Plan
+
+<!--
+이 문서는 design-doc Plan 사이클에서 결정 단위(d-*)가 consensus에 도달할 때마다 점진적으로 채워진다.
+spec_hash는 본 plan이 기반한 spec.md 스냅샷의 sha256 앞 8자리다. spec.md가 변경되면 불일치를 감지할 수 있다.
+-->
+
+## Architecture Overview
+
+<!-- 전체 아키텍처를 2~4 paragraph로. -->
+
+## Technical Decisions
+
+### <!-- d-001 --> {{TITLE}}
+
+- **Decision status**: open
+- **Options considered**:
+  1. ...
+  2. ...
+- **Chosen option**: ...
+- **Rationale**: ...
+- **Trade-offs**: ...
+- **Review trail**: [`reviews/plan/d-001/`](reviews/plan/d-001/)
+
+<!-- 추가 d-* 결정 블록은 합의 시점에 Planner가 삽입한다. -->
+
+## Component Boundaries
+
+<!-- 컴포넌트/도메인 경계와 각각의 책임. -->
+
+## Risks & Mitigations
+
+## Scope (In / Out)
+
+## Implementation Sequence
+
+<!-- /work에서 구현될 순서. 큰 단계로. -->

@@ -27,7 +27,7 @@ $ARGUMENTS에서 파싱합니다:
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
 ```
 
-`{PROJECT_ROOT}/harness/exec-plans/completed/*/reflection.md`를 스캔합니다.
+`{PROJECT_ROOT}/harness/topics/*/reflection.md`를 스캔합니다. `reflection.md`의 존재가 토픽 완료 마커입니다.
 
 `{PROJECT_ROOT}/harness/learning-log.md`를 읽어 이미 처리된 토픽을 확인합니다. 상태가 "처리 완료"인 항목은 건너뜁니다.
 
@@ -42,7 +42,7 @@ Project root: {PROJECT_ROOT}
 
 Files to read:
 - {PROJECT_ROOT}/harness/learning-log.md
-- {PROJECT_ROOT}/harness/exec-plans/completed/*/reflection.md (all reflections)
+- {PROJECT_ROOT}/harness/topics/*/reflection.md (all reflections — reflection.md's existence marks a completed topic)
 - {PROJECT_ROOT}/harness/rules/ (scan RULE.md in each folder)
 - {PROJECT_ROOT}/harness/eval-criteria/ (all criteria files)
 - {PROJECT_ROOT}/ARCHITECTURE.md

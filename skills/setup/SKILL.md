@@ -32,7 +32,7 @@ argument-hint: "[project-description]"
 
 **시나리오 C: 목표가 없는 빈 프로젝트**
 - 최소 기본값으로 harness 구조를 생성합니다
-- /plan 실행 시 내용이 채워집니다
+- /meeting 후 /design-doc 실행 시 내용이 채워집니다
 
 ### 2단계: CLAUDE.md 생성 (프로젝트 루트)
 
@@ -59,8 +59,8 @@ eval_tool: playwright    # playwright | chrome-devtools
 
 ## Knowledge Base
 - [Design Docs](harness/design-docs/index.md) — Architectural decisions and core beliefs
-- [Product Specs](harness/product-specs/) — Product specifications
-- [Exec Plans](harness/exec-plans/) — Active and completed execution plans
+- [Meetings](harness/meetings/) — Brainstorming backlog (one meeting per backlog item)
+- [Topics](harness/topics/) — Design documents + execution artifacts per topic
 - [Eval Criteria](harness/eval-criteria/) — Evaluation criteria for quality verification
 - [References](harness/references/) — External reference materials
 
@@ -77,7 +77,7 @@ eval_tool: playwright    # playwright | chrome-devtools
 ### 3단계: ARCHITECTURE.md 생성 (프로젝트 루트)
 
 시나리오 A의 경우: 코드베이스에서 발견한 실제 도메인/레이어 구조를 문서화합니다.
-시나리오 B/C의 경우: /plan이 나중에 채울 최소 템플릿을 생성합니다.
+시나리오 B/C의 경우: `/design-doc`이 나중에 참조할 최소 템플릿을 생성합니다.
 
 ```markdown
 # Architecture
@@ -101,11 +101,9 @@ harness/
 ├── design-docs/
 │   ├── index.md              # Index of design documents
 │   └── core-beliefs.md       # Core engineering beliefs
-├── product-specs/            # Empty, populated by /plan
-├── exec-plans/
-│   ├── active/               # Empty, populated by /plan and /work
-│   ├── completed/            # Empty, moved here after completion
-│   └── tech-debt-tracker.md  # Technical debt tracking
+├── meetings/                 # Empty, populated by /meeting
+├── topics/                   # Empty, populated by /design-doc and /work
+│   └── tech-debt-tracker.md  # Technical debt tracking (cross-topic)
 ├── eval-criteria/
 │   ├── functionality.md      # Core functionality verification
 │   └── code-quality.md       # Code quality standards
@@ -118,6 +116,8 @@ harness/
 ├── RELIABILITY.md            # Reliability requirements
 └── SECURITY.md               # Security guidelines
 ```
+
+`meetings/` 하위는 `M{YYYYMMDDHHmmss}_{slug}/` 디렉토리로, `topics/` 하위는 `H{YYYYMMDDHHmmss}_{slug}/` 디렉토리로 채워집니다. 토픽 완료 여부는 해당 토픽 디렉토리 내 `reflection.md` 존재로 판단합니다 (별도 완료 이동 없음).
 
 ### 4a단계: 학습 인프라 초기화
 
@@ -192,7 +192,7 @@ Once a human taste preference is captured, apply it consistently across all code
 모든 파일을 생성한 후 요약을 출력합니다:
 - 감지된 시나리오 (A/B/C)
 - 생성된 파일 목록
-- 권장 다음 단계 (/plan 실행)
+- 권장 다음 단계 (/meeting → /design-doc 실행)
 
 ## 중요 규칙
 

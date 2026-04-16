@@ -1,0 +1,25 @@
+---
+topic: {{H_CODE}}
+slug: {{SLUG}}
+source_meetings:
+  - {{M_CODE}}
+---
+
+# Meeting Reference
+
+이 토픽은 다음 회의(들)의 확정 사항을 입력으로 사용한다.
+
+## Source meetings
+
+| Meeting code | Slug | Role |
+|--------------|------|------|
+| {{M_CODE}} | {{M_SLUG}} | primary |
+
+## Paths
+
+- `harness/meetings/{{M_CODE}}_{{M_SLUG}}/meeting.md`
+
+## 참조 규칙
+
+- meeting의 내용을 복사해 design-doc에 붙여넣지 않는다.
+- meeting의 슬러그가 바뀌어도 코드는 불변이므로 참조가 깨지지 않는다.

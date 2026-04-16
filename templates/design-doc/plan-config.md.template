@@ -1,0 +1,36 @@
+---
+topic: {{H_CODE}}
+complexity: simple | moderate | complex
+eval_rounds: 1
+eval_tool: playwright
+applicable_rules: []
+---
+
+# Plan Config: {{SLUG}}
+
+## Topic
+- Code: {{H_CODE}}
+- Name: {{SLUG}}
+- Spec: topics/{{H_CODE}}_{{SLUG}}/spec.md
+- Plan: topics/{{H_CODE}}_{{SLUG}}/plan.md
+
+## Complexity Assessment
+- Level: {{complexity}}
+- Reasoning:
+  <!-- 왜 이 복잡도 레벨인지 1~2 paragraph -->
+
+## Dynamic Settings
+- planner: completed
+- eval_rounds: {{eval_rounds}}    # simple=1, moderate=2, complex=3
+- eval_tool: {{eval_tool}}
+
+## Applicable Rules
+
+<!--
+harness/rules/ 에서 매칭되는 conv-/pattern-/lib- 규칙 폴더 목록.
+없으면 "None".
+-->
+
+## Notes
+
+<!-- Generator/Evaluator에 전달할 추가 컨텍스트. -->

@@ -36,10 +36,10 @@ $ARGUMENTS에서 파싱합니다:
 ```
 Round: {round}
 Project root: {worktree}
-Topic directory: {worktree}/harness/exec-plans/active/{topic}/
+Topic directory: {worktree}/harness/topics/{topic}/
 
 Files to read:
-- {worktree}/harness/exec-plans/active/{topic}/build-result-r{round}.md (changed files list)
+- {worktree}/harness/topics/{topic}/build-result-r{round}.md (changed files list)
 - {additional files — see table below}
 
 Return your findings as structured text. Do NOT create a file.
@@ -55,7 +55,7 @@ Return your findings as structured text. Do NOT create a file.
 | 4 | Performance | `flowness:performance-reviewer` | `ARCHITECTURE.md` |
 | 5 | Architecture | `flowness:architecture-reviewer` | `build-contract.md`, `ARCHITECTURE.md` |
 
-모든 추가 파일 경로는 절대 경로여야 합니다: `{worktree}/harness/exec-plans/active/{topic}/build-contract.md`, `{worktree}/ARCHITECTURE.md`.
+모든 추가 파일 경로는 절대 경로여야 합니다: `{worktree}/harness/topics/{topic}/build-contract.md`, `{worktree}/ARCHITECTURE.md`.
 
 5개 모두 완료될 때까지 대기합니다.
 

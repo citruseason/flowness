@@ -1,0 +1,44 @@
+---
+topic: {{H_CODE}}
+slug: {{SLUG}}
+status: in-progress
+---
+
+# Spec
+
+<!--
+이 문서는 design-doc Spec 사이클에서 결정 단위(f-*)가 consensus에 도달할 때마다 Planner에 의해 점진적으로 채워진다.
+합의되지 않은 내용은 reviews/spec/{f-id}/ 에만 존재한다. 이 문서에 미합의 내용을 기록하지 않는다.
+-->
+
+## Overview
+
+<!-- 제품/기능의 목적. 2~3 paragraph. -->
+
+## Goals / Non-goals
+
+<!-- 명시적 Goal 목록과 Non-goal 목록. -->
+
+## Features
+
+### <!-- f-001 --> {{TITLE}}
+
+- **Decision status**: open
+- **Summary**: ...
+- **Rationale**: ...
+- **Acceptance**: ...
+- **Review trail**: [`reviews/spec/f-001/`](reviews/spec/f-001/)
+
+<!-- 추가 f-* 결정 블록은 합의 시점에 Planner가 삽입한다. -->
+
+## User Stories
+
+<!-- 각 feature에 대응하는 사용자 스토리. -->
+
+## Success Criteria
+
+<!-- Evaluator가 기계적으로 검증 가능한 기준. -->
+
+## Dependencies & Integration Points
+
+<!-- 외부 시스템, 서드파티 API, 기존 모듈과의 통합 지점. -->

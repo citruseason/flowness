@@ -1,0 +1,19 @@
+# Decisions
+
+<!--
+결정 원장. 본 파일은 파일 내용 파싱 없이 scripts가 status 컬럼만 집계하도록 설계되었다.
+표의 컬럼 이름은 고정 (`ID`, `Title`, `Status`, `Rounds`, `Last updated`).
+Status 값: open | consensus | escalated | skipped
+-->
+
+## Spec Cycle
+
+| ID    | Title | Status | Rounds | Last updated |
+|-------|-------|--------|--------|--------------|
+| f-001 | ...   | open   | 0      |              |
+
+## Plan Cycle
+
+| ID    | Title | Status | Rounds | Last updated |
+|-------|-------|--------|--------|--------------|
+| d-001 | ...   | open   | 0      |              |

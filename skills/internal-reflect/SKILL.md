@@ -30,8 +30,8 @@ $ARGUMENTS에서 파싱합니다:
 토픽 디렉토리에서 모든 라운드 결과물을 식별합니다:
 
 ```bash
-# 완료된 토픽 디렉토리
-TOPIC_DIR="{worktree}/harness/exec-plans/completed/{topic}"
+# 토픽 디렉토리 (reflection.md가 생성되면 완료로 간주됨)
+TOPIC_DIR="{worktree}/harness/topics/{topic}"
 
 # 라운드 결과물 Glob
 code-review-r*.md
@@ -46,17 +46,17 @@ Agent 도구를 `subagent_type: flowness:reflector`로 사용합니다:
 
 ```
 Project root: {worktree}
-Topic directory: {worktree}/harness/exec-plans/completed/{topic}/
+Topic directory: {worktree}/harness/topics/{topic}/
 
 Files to read:
-- {worktree}/harness/exec-plans/completed/{topic}/build-contract.md
-- {worktree}/harness/exec-plans/completed/{topic}/code-review-r*.md (all rounds)
-- {worktree}/harness/exec-plans/completed/{topic}/eval-result-r*.md (all rounds)
+- {worktree}/harness/topics/{topic}/build-contract.md
+- {worktree}/harness/topics/{topic}/code-review-r*.md (all rounds)
+- {worktree}/harness/topics/{topic}/eval-result-r*.md (all rounds)
 - {worktree}/ARCHITECTURE.md
 - {worktree}/harness/rules/ (scan RULE.md in each folder for current coverage)
 - {worktree}/harness/eval-criteria/ (scan for current criteria)
 
-Write your output to: {worktree}/harness/exec-plans/completed/{topic}/reflection.md
+Write your output to: {worktree}/harness/topics/{topic}/reflection.md
 ```
 
 완료될 때까지 대기합니다.
