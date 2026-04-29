@@ -32,12 +32,13 @@ argument-hint: "<H-code> | <M-code> | (empty)"
 ### 0단계: 전제조건 확인
 
 1. `CLAUDE.md`, `ARCHITECTURE.md`, `harness/` 존재 확인. 없으면 `/setup` 안내.
-2. Codex 가용성 확인:
+2. Codex 가용성 확인 (`scripts/codex-review.mjs --check` 사용):
    ```bash
-   command -v codex >/dev/null 2>&1 && codex --version >/dev/null 2>&1 && echo "CODEX_READY=true" || echo "CODEX_READY=false"
+   node scripts/codex-review.mjs --check --json
    ```
-   결과에 `CODEX_READY=true`가 있으면 `CODEX_AVAILABLE=true`, 그 외 `false`.
-   (과거 `codex-companion.mjs` / `codex-plugin-cc` 방식은 폐기됨 — `codex` CLI 바이너리 존재만 확인.)
+   결과 JSON의 `ok`가 `true`이면 `CODEX_AVAILABLE=true`, 그 외 `false`.
+   이 체크는 **바이너리 존재 + 로그인 상태**를 모두 검증합니다.
+   (과거 `codex-companion.mjs` / `codex-plugin-cc` / `command -v codex` 방식은 폐기됨.)
 3. Agent Teams 기능 확인:
    - `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` 환경이 비활성이면 본 스킬 실행 불가. 사용자에게 활성화 안내 후 종료.
 

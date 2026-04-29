@@ -158,14 +158,36 @@ created: 2026-04-16T07:46:00Z
 
 ## 실패 처리
 
-- `codex-review.mjs` 호출이 실패하면 (exit code ≠ 0):
-  - `r{N}-codex.md`에 `verdict: fail` + `reason: codex unavailable`을 기록.
-  - 메시지: `[STATUS: review r{N} {d-id} FAIL]` + `Reason: codex unavailable, request fallback`
-  - 오케스트레이터가 팀을 Opus 폴백으로 재구성할지 판단합니다 (본 에이전트는 스스로 판단하지 않음).
-- exit code별 의미:
-  - `1`: codex 바이너리 없음 또는 프롬프트 미제공
-  - `2`: codex 실행 실패
-  - `3`: 타임아웃
+`codex-review.mjs` 호출이 실패하면 (exit code ≠ 0):
+
+1. `r{N}-codex.md`에 exit code에 맞는 `verdict: fail` + `reason`을 기록.
+2. 메시지: `[STATUS: review r{N} {d-id} FAIL]` + `Reason: {에러 유형}, request fallback`
+3. 오케스트레이터가 팀을 Opus 폴백으로 재구성할지 판단합니다 (본 에이전트는 스스로 판단하지 않음).
+
+### exit code별 의미와 대응
+
+| Exit | 의미 | reason 값 | 비고 |
+|------|------|-----------|------|
+| `0` | 성공 | — | 정상 경로 |
+| `1` | 바이너리 없음 / 미로그인 / 프롬프트 누락 | `codex not ready` | `--check` 프리플라이트에서 걸림 |
+| `2` | codex 실행 실패 (API 에러 등) | `codex exec failed` | stderr에 상세 사유 |
+| `3` | 타임아웃 | `codex timeout` | `--timeout` 초과 |
+| `4` | 빈 응답 (재시도 소진) | `codex empty response` | Codex가 응답을 반환하지 않음 |
+
+### exit 4 (빈 응답) 특별 처리
+
+스크립트는 `--retries N`으로 빈 응답 시 자동 재시도합니다 (기본 1회 재시도). 재시도까지 소진되면 exit 4를 반환합니다.
+
+이 에이전트가 호출 시 `--retries 2`를 권장합니다:
+
+```bash
+node scripts/codex-review.mjs \
+  --prompt-file /tmp/codex-prompt-{d-id}-r{N}.txt \
+  --cwd {project-root} \
+  --output {topic-dir}/reviews/{cycle}/{d-id}/r{N}-codex-raw.md \
+  --timeout 180000 \
+  --retries 2
+```
 
 ## 상태 태그
 
