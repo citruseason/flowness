@@ -154,6 +154,7 @@ function runCodexExec(codexBin, prompt, opts) {
   const args = [
     "exec",
     "--sandbox", "read-only",
+    "--ephemeral",
     "-o", tmpOut,
   ];
   if (opts.cwd) {
