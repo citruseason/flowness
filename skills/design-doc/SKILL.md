@@ -111,25 +111,27 @@ source_meetings:
 
 ### 4단계: Spec 사이클
 
-#### 4a. 팀 생성
+#### 4a. 팀 생성 (2-에이전트)
 
 ```
 TeamCreate:
   - flowness:design-doc-planner (Spec 모드)
-  - flowness:design-doc-claude-reviewer (Spec 모드)
   - if CODEX_AVAILABLE: flowness:design-doc-codex-reviewer (Spec 모드)
     else: flowness:design-doc-opus-reviewer (Spec 모드)
 ```
+
+> **Claude Reviewer는 팀에서 제거되었습니다.** 측정 가능성/구현 누출/meeting 정합성/명확성/완전성 검증은 Planner의 자체 품질 검증(Self-validation)으로 흡수되었습니다. 이를 통해 에이전트 수 3→2, 라운드당 리뷰 파일 수 2→1, consensus 조건을 Codex PASS 단독으로 단순화하여 토큰 소모를 약 40~50% 절감합니다.
 
 각 에이전트에 공통 프롬프트 주입:
 
 ```
 Mode: spec
 Topic directory: harness/topics/H{ts}_{slug}/
-Team members: [planner, claude-reviewer, <codex|opus>-reviewer]
-Max rounds per decision: 20
+Team members: [planner, <codex|opus>-reviewer]
+Max rounds per decision: 10
 Load context-pack.md once at session start. Do NOT re-read per round.
 Use the status-tag protocol. Messages carry file pointers, not content.
+r2+ proposals MUST use delta format (Appendix B in planner agent).
 ```
 
 #### 4b. 초기 결정 목록 생성
@@ -138,13 +140,14 @@ Planner에게 첫 명령 전송:
 
 ```
 SendMessage → planner:
-[BOOT] Please initialize the Spec cycle.
+[BOOT] Initialize the Spec cycle.
 Read meeting-ref.md → source meetings → meeting.md.
-Produce an initial list of feature decisions (f-*).
+Produce initial list of feature decisions (f-*).
 Write:
   - decisions.md (Spec Cycle table, all status=open)
   - spec.md scaffolding with empty decision blocks
 Then propose the first decision with [STATUS: proposal r1 f-001].
+IMPORTANT: Run self-validation (S1-S5) before sending. r2+ must use delta format.
 ```
 
 #### 4c. 사이클 루프 (오케스트레이터 감시)
@@ -155,8 +158,8 @@ Then propose the first decision with [STATUS: proposal r1 f-001].
 |------|------|
 | 태그 없는 메시지 | 발신자에게 재요청 |
 | `[STATUS: done {d-id}]` 수신 | `decisions.md` 상태를 확인하고 다음 `open` 결정으로 진행 지시 |
-| 동일 결정 `rounds > 20` | 오케스트레이터가 `[STATUS: escalate {d-id}]`를 기록하고 §에스컬레이션 메뉴 표시 |
-| 동일 결정 `proposal` 중복 수신 | 최신 것만 채택, 이전 것은 무시 알림 |
+| 동일 결정 `rounds > 10` | 오케스트레이터가 `[STATUS: escalate {d-id}]`를 기록하고 §에스컬레이션 메뉴 표시 |
+| r2+ proposal이 `kind: proposal-delta`가 아님 | Planner에게 delta 형식으로 재작성 요청 |
 | 5분 이상 무반응 | 재촉 프롬프트 |
 | `decisions.md` 파싱 에러 | Planner에게 수정 요청, 3회 실패 시 에스컬레이션 |
 
@@ -185,12 +188,11 @@ Spec 팀의 메모리는 여기서 종료됩니다. Plan 팀은 새 세션으로
 
 ### 5단계: Plan 사이클
 
-#### 5a. 팀 생성 (신규 세션)
+#### 5a. 팀 생성 (2-에이전트, 신규 세션)
 
 ```
 TeamCreate:
   - flowness:design-doc-planner (Plan 모드)
-  - flowness:design-doc-claude-reviewer (Plan 모드)
   - if CODEX_AVAILABLE: flowness:design-doc-codex-reviewer (Plan 모드)
     else: flowness:design-doc-opus-reviewer (Plan 모드)
 ```
@@ -200,13 +202,14 @@ TeamCreate:
 ```
 Mode: plan
 Topic directory: harness/topics/H{ts}_{slug}/
-Team members: [...]
-Max rounds per decision: 20
+Team members: [planner, <codex|opus>-reviewer]
+Max rounds per decision: 10
 Input artifacts:
   - context-pack.md (load once)
   - spec.md (approved; read once)
   - decisions.md Spec Cycle (read once, for reference only; do not modify)
 Use the status-tag protocol. File-Truth messages only.
+r2+ proposals MUST use delta format (Appendix B in planner agent).
 ```
 
 #### 5b. 초기 결정 목록 생성
@@ -304,8 +307,9 @@ applicable_rules: [...]
 - **직접 리뷰를 수행하지 마세요** — 두 리뷰어가 담당.
 - **팀 생명주기는 사이클 단위** — Spec 팀을 Plan 사이클로 재사용하지 않습니다.
 - **파일이 진실** — 팀 메시지가 유실되어도 `reviews/`, `decisions.md`, `spec.md`, `plan.md`에서 재진입 가능해야 합니다.
-- **Codex 가용성** — `CODEX_AVAILABLE=false`이면 Opus 폴백을 사용해 **항상 3인 팀을 유지**합니다.
+- **Codex 가용성** — `CODEX_AVAILABLE=false`이면 Opus 폴백을 사용합니다. 어느 경우든 **2인 팀(Planner + Reviewer)**을 유지합니다.
 - **Agent Teams 미지원 환경**은 즉시 종료하고 안내합니다. 비활성 폴백 모드는 구현하지 않습니다.
+- **Delta 강제** — r2+ proposal이 `kind: proposal-delta`가 아니면 Planner에게 재작성을 요청합니다.
 - **script 호출로 상태 파악** — 파일 내용을 AI가 재읽지 말고 `scripts/topic-state.mjs`로 상태를 먼저 확인합니다.
 - **Max rounds는 결정 단위 기준** — 전체 사이클이 아니라 한 결정 단위에 대한 상한입니다.
 - **재개 시 중복 생성 금지** — 이미 consensus 상태인 결정은 다시 제안되지 않도록 Planner에게 지시합니다.

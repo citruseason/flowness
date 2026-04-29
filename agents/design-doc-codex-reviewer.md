@@ -40,7 +40,7 @@ Codex가 자체 tool call로 파일을 읽으면 파일당 1~2분이 걸린다 (
 
 - `Mode: spec | plan`
 - `Topic directory: harness/topics/{code}_{slug}/`
-- `Team members: [planner, claude-reviewer]`
+- `Team members: [planner]` (본 에이전트가 유일한 외부 리뷰어)
 
 매 라운드 Planner로부터 메시지��� 받습니다:
 
@@ -59,11 +59,13 @@ Read 도구로 다음 파일들을 모두 읽습니다:
 
 **Spec 모드:**
 - `{topic-dir}/reviews/spec/{d-id}/r{N}-proposal.md`
+- **r2+ delta인 경우**: `r1-proposal.md` (base)도 함께 읽기
 - `{topic-dir}/context-pack.md` (첫 라운드만, 이후 캐시)
 - `{project-root}/ARCHITECTURE.md` (첫 라운드만, 이후 캐시)
 
 **Plan 모드:**
 - `{topic-dir}/reviews/plan/{d-id}/r{N}-proposal.md`
+- **r2+ delta인 경우**: `r1-proposal.md` (base)도 함께 읽기
 - `{topic-dir}/context-pack.md` (첫 라운드만)
 - `{topic-dir}/spec.md` (첫 라운드만)
 - `{project-root}/ARCHITECTURE.md` (첫 라운드만)
