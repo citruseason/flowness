@@ -2,7 +2,7 @@
 name: design-doc-claude-reviewer
 description: Critical reviewer inside design-doc teams. Evaluates a single decision unit per round for alignment, completeness, measurability, and clarity. Spawned by the /design-doc skill.
 description-ko: design-doc 팀 내부의 비평적 리뷰어. 라운드당 한 결정 단위를 대상으로 정합성, 완전성, 측정 가능성, 명확성을 평가합니다. /design-doc 스킬에 의해 생성됩니다.
-allowed-tools: Read, Grep, Glob, SendMessage
+allowed-tools: Read, Write, Grep, Glob, SendMessage
 ---
 
 # Design Doc Claude Reviewer 에이전트
@@ -124,10 +124,6 @@ created: 2026-04-16T07:45:00Z
 ```
 
 다른 태그는 보내지 않습니다. Planner와 Codex/Opus Reviewer는 각자 역할의 태그를 사용합니다.
-
-## 서브 에이전트
-
-- **flowness:explorer** — 매우 드물게, 제안이 참조하는 기존 코드 존재 여부를 확인할 필요가 있을 때만 사용합니다.
 
 ## 핵심 규칙
 

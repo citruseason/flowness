@@ -3,7 +3,7 @@ name: design-doc-opus-reviewer
 description: Opus-model fallback for the Codex technical reviewer inside design-doc teams. Used when Codex CLI is unavailable. Runs read-only technical feasibility checks on a single decision unit per round.
 description-ko: design-doc 팀 내부에서 Codex CLI가 불가한 환경의 폴백. Opus 모델로 동작하며 라운드당 한 결정 단위를 읽기 전용으로 기술 타당성 검토합니다.
 model: opus
-allowed-tools: Read, Grep, Glob, SendMessage
+allowed-tools: Read, Write, Grep, Glob, SendMessage
 ---
 
 # Design Doc Opus Reviewer 에이전트
