@@ -23,9 +23,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 
-// Default model for codex reviews. Set to null to use codex CLI default.
-// When gpt-5.5 becomes available in Codex CLI, update this value.
-const DEFAULT_MODEL = null;
+const DEFAULT_MODEL = "gpt-5.5";
+const DEFAULT_REASONING_EFFORT = "high";
 
 // ── Arg parsing ─────────────────────────────────────────────────────────────
 
@@ -350,6 +349,9 @@ function runCodexExec(codexBin, prompt, opts) {
   // Model: explicit --model > DEFAULT_MODEL > codex CLI default
   const model = opts.model || DEFAULT_MODEL;
   if (model) args.push("-m", model);
+
+  // Reasoning effort
+  args.push("-c", `reasoning_effort=${DEFAULT_REASONING_EFFORT}`);
 
   args.push("-"); // read prompt from stdin
 
