@@ -127,11 +127,13 @@ TeamCreate:
 ```
 Mode: spec
 Topic directory: harness/topics/H{ts}_{slug}/
+Project root: {project-root}
 Team members: [planner, <codex|opus>-reviewer]
 Max rounds per decision: 10
 Load context-pack.md once at session start. Do NOT re-read per round.
 Use the status-tag protocol. Messages carry file pointers, not content.
 r2+ proposals MUST use delta format (Appendix B in planner agent).
+Codex reviewer: uses `codex-review.mjs --review` (no file I/O in agent).
 ```
 
 #### 4b. 초기 결정 목록 생성
@@ -202,6 +204,7 @@ TeamCreate:
 ```
 Mode: plan
 Topic directory: harness/topics/H{ts}_{slug}/
+Project root: {project-root}
 Team members: [planner, <codex|opus>-reviewer]
 Max rounds per decision: 10
 Input artifacts:
@@ -210,6 +213,7 @@ Input artifacts:
   - decisions.md Spec Cycle (read once, for reference only; do not modify)
 Use the status-tag protocol. File-Truth messages only.
 r2+ proposals MUST use delta format (Appendix B in planner agent).
+Codex reviewer: uses `codex-review.mjs --review` (no file I/O in agent).
 ```
 
 #### 5b. 초기 결정 목록 생성

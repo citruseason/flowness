@@ -1,6 +1,6 @@
 {
   "name": "flowness",
-  "version": "0.1.24",
+  "version": "0.1.25",
   "description": "Harness engineering workflow plugin for Claude Code. Structured development with Setup, Meeting, Design-Doc, Work (Build-Eval), and Maintain phases.",
   "agents": [
     "./agents/design-doc-planner.md",
